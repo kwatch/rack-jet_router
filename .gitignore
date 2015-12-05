@@ -1,0 +1,11 @@
+*~
+*.pyc
+*.pyo
+__pycache__/*
+*.rbc
+*.class
+*.o
+*.cache
+*.DS_Store
+tmp/*
+.svn/*
