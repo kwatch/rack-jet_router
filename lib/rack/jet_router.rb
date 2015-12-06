@@ -286,18 +286,8 @@ module Rack
     end
 
     #; [!haggu] contains available request methods.
-    REQUEST_METHODS = {
-      "GET"      => :GET,
-      "POST"     => :POST,
-      "PUT"      => :PUT,
-      "DELETE"   => :DELETE,
-      "PATCH"    => :PATCH,
-      "HEAD"     => :HEAD,
-      "OPTIONS"  => :OPTIONS,
-      "TRACE"    => :TRACE,
-      "LINK"     => :LINK,
-      "UNLINK"   => :UNLINK,
-    }
+    REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
+                        .each_with_object({}) {|s, d| d[s] = s.intern }
 
   end
 
