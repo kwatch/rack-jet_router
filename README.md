@@ -225,6 +225,12 @@ $License: MIT License $
 
 ## History
 
-### 2015-12-06: Release 0.1.0
+
+### 2015-12-06: Release 1.0.1
+
+* Fix document
+
+
+### 2015-12-06: Release 1.0.0
 
 * First release
