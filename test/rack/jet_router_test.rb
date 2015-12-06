@@ -64,19 +64,6 @@ describe Rack::JetRouter do
   end
 
 
-  describe 'REQUEST_METHODS' do
-
-    it "[!haggu] contains available request methods." do
-      Rack::JetRouter::REQUEST_METHODS.each do |k, v|
-        ok {k}.is_a?(String)
-        ok {v}.is_a?(Symbol)
-        ok {v.to_s} == k
-      end
-    end
-
-  end
-
-
   describe '#compile_urlpath_pattern()' do
 
     it "[!joozm] escapes metachars with backslash in text part." do
@@ -610,6 +597,19 @@ describe Rack::JetRouter do
       env = new_env(:GET,    '/admin/books/123')
       jet_router.call(env)
       ok {env['rack.urlpath_params']} == {"id"=>"123"}
+    end
+
+  end
+
+
+  describe 'REQUEST_METHODS' do
+
+    it "[!haggu] contains available request methods." do
+      Rack::JetRouter::REQUEST_METHODS.each do |k, v|
+        ok {k}.is_a?(String)
+        ok {v}.is_a?(Symbol)
+        ok {v.to_s} == k
+      end
     end
 
   end

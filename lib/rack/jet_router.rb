@@ -53,20 +53,6 @@ module Rack
   ##
   class JetRouter
 
-    #; [!haggu] contains available request methods.
-    REQUEST_METHODS = {
-      "GET"      => :GET,
-      "POST"     => :POST,
-      "PUT"      => :PUT,
-      "DELETE"   => :DELETE,
-      "PATCH"    => :PATCH,
-      "HEAD"     => :HEAD,
-      "OPTIONS"  => :OPTIONS,
-      "TRACE"    => :TRACE,
-      "LINK"     => :LINK,
-      "UNLINK"   => :UNLINK,
-    }
-
     def initialize(mapping, urlpath_cache_size: 0)
       #; [!u2ff4] compiles urlpath mapping.
       (@urlpath_rexp,          # ex: {'/api/books'=>BooksApp}
@@ -298,6 +284,20 @@ module Rack
         newdict[meth.to_s] = app
       end
     end
+
+    #; [!haggu] contains available request methods.
+    REQUEST_METHODS = {
+      "GET"      => :GET,
+      "POST"     => :POST,
+      "PUT"      => :PUT,
+      "DELETE"   => :DELETE,
+      "PATCH"    => :PATCH,
+      "HEAD"     => :HEAD,
+      "OPTIONS"  => :OPTIONS,
+      "TRACE"    => :TRACE,
+      "LINK"     => :LINK,
+      "UNLINK"   => :UNLINK,
+    }
 
   end
 
