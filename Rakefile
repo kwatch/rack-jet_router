@@ -26,7 +26,7 @@ How to release:
     $ rake build                # for confirmation
     $ rake install              # for confirmation
     $ #rake release
-    $ gem push pkg/rake-jet_router-1.0.0.gem
+    $ gem push pkg/rack-jet_router-1.0.0.gem
     $ git tag v1.0.0
     $ git push -u origin rel-1.0
     $ git push --tags
