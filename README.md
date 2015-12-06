@@ -9,7 +9,7 @@ derived from [Keight.rb](https://github.com/kwatch/keight/tree/ruby).
 Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/dev/bench/bench.rb).
 
 ```
-## Ranking                        real[ns]
+## Ranking                        usec/req
 (Rack plain)  /api/hello             1.555 (100.0%) ********************
 (JetRouter)   /api/hello             1.597 ( 97.4%) *******************
 (JetRouter)   /api/hello/123         6.424 ( 24.2%) *****
