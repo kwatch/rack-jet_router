@@ -279,9 +279,10 @@ module Rack
       #; [!k7sme] raises error when unknown request method specified.
       request_methods = REQUEST_METHODS
       return dict.each_with_object({}) do |(meth, app), newdict|
-        request_methods[meth.to_s] || meth.to_s == 'ANY'  or
+        meth_str = meth.to_s
+        request_methods[meth_str] || meth_str == 'ANY'  or
           raise ArgumentError.new("#{meth.inspect}: unknown request method.")
-        newdict[meth.to_s] = app
+        newdict[meth_str] = app
       end
     end
 
