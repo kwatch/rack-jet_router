@@ -14,7 +14,7 @@ END
   spec.license       = "MIT-License"
 
   spec.files         = Dir[*%w[
-                         README.md MIT-LICENSE Rakefile
+                         README.md MIT-LICENSE Rakefile rack-jet_router.gemspec
                          lib/**/*.rb
                          test/test_helper.rb test/**/*_test.rb
                        ]]
