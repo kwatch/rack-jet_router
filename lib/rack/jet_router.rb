@@ -53,20 +53,6 @@ module Rack
   ##
   class JetRouter
 
-    #; [!haggu] contains available request methods.
-    REQUEST_METHODS = {
-      "GET"      => :GET,
-      "POST"     => :POST,
-      "PUT"      => :PUT,
-      "DELETE"   => :DELETE,
-      "PATCH"    => :PATCH,
-      "HEAD"     => :HEAD,
-      "OPTIONS"  => :OPTIONS,
-      "TRACE"    => :TRACE,
-      "LINK"     => :LINK,
-      "UNLINK"   => :UNLINK,
-    }
-
     def initialize(mapping, urlpath_cache_size: 0)
       #; [!u2ff4] compiles urlpath mapping.
       (@urlpath_rexp,          # ex: {'/api/books'=>BooksApp}
@@ -99,9 +85,8 @@ module Rack
         #; [!ys1e2] uses GET method when HEAD is not mapped.
         #; [!2hx6j] try ANY method when request method is not mapped.
         dict = app
-        req_meth = REQUEST_METHODS[env['REQUEST_METHOD']]
-        return error_not_allowed(env) unless req_meth
-        app = dict[req_meth] || (req_meth == :HEAD ? dict[:GET] : nil) || dict[:ANY]
+        req_meth = env['REQUEST_METHOD']
+        app = dict[req_meth] || (req_meth == 'HEAD' ? dict['GET'] : nil) || dict['ANY']
         return error_not_allowed(env) unless app
       end
       #; [!2c32f] stores urlpath parameters as env['rack.urlpath_params'].
@@ -224,7 +209,7 @@ module Rack
         else
           #; [!guhdc] if mapping dict is specified...
           if obj.is_a?(Hash)
-            obj = _symbolize_mapping_keys(obj)
+            obj = normalize_mapping_keys(obj)
           end
           #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
           full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, param_pat2)
@@ -288,17 +273,22 @@ module Rack
       end
     end
 
-    def _symbolize_mapping_keys(dict)
-      #; [!r7cmk] converts keys from string into symbol.
-      #; [!z9kww] allows :ANY as request method.
+    def normalize_mapping_keys(dict)
+      #; [!r7cmk] converts keys into string.
+      #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
       request_methods = REQUEST_METHODS
       return dict.each_with_object({}) do |(meth, app), newdict|
-        sym = request_methods[meth.to_s] || (meth.to_s == 'ANY' ? :ANY : nil)  or
+        meth_str = meth.to_s
+        request_methods[meth_str] || meth_str == 'ANY'  or
           raise ArgumentError.new("#{meth.inspect}: unknown request method.")
-        newdict[sym] = app
+        newdict[meth_str] = app
       end
     end
+
+    #; [!haggu] contains available request methods.
+    REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
+                        .each_with_object({}) {|s, d| d[s] = s.intern }
 
   end
 

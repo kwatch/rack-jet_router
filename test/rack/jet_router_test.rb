@@ -64,19 +64,6 @@ describe Rack::JetRouter do
   end
 
 
-  describe 'REQUEST_METHODS' do
-
-    it "[!haggu] contains available request methods." do
-      Rack::JetRouter::REQUEST_METHODS.each do |k, v|
-        ok {k}.is_a?(String)
-        ok {v}.is_a?(Symbol)
-        ok {v.to_s} == k
-      end
-    end
-
-  end
-
-
   describe '#compile_urlpath_pattern()' do
 
     it "[!joozm] escapes metachars with backslash in text part." do
@@ -305,23 +292,23 @@ describe Rack::JetRouter do
 
     describe "[!guhdc] if mapping dict is specified..." do
 
-      it "[!r7cmk] converts keys from string into symbol." do
+      it "[!r7cmk] converts keys into string." do
         mapping = [
-          ['/books', {"GET"=>book_list_api, "POST"=>book_create_api}]
+          ['/books', {:GET=>book_list_api, :POST=>book_create_api}]
         ]
         Rack::JetRouter.new([]).instance_exec(self) do |_|
           rexp, dict, list = compile_mapping(mapping)
-          _.ok {dict['/books']} == {:GET=>book_list_api, :POST=>book_create_api}
+          _.ok {dict['/books']} == {'GET'=>book_list_api, 'POST'=>book_create_api}
         end
       end
 
-      it "[!z9kww] allows :ANY as request method." do
+      it "[!z9kww] allows 'ANY' as request method." do
         mapping = [
-          ['/books', {:ANY=>book_list_api, :POST=>book_create_api}]
+          ['/books', {'ANY'=>book_list_api, 'POST'=>book_create_api}]
         ]
         Rack::JetRouter.new([]).instance_exec(self) do |_|
           rexp, dict, list = compile_mapping(mapping)
-          _.ok {dict['/books']} == {:ANY=>book_list_api, :POST=>book_create_api}
+          _.ok {dict['/books']} == {'ANY'=>book_list_api, 'POST'=>book_create_api}
         end
       end
 
@@ -396,8 +383,8 @@ describe Rack::JetRouter do
           '/api/books'       => book_list_api,
           '/api/books/new'   => book_new_api,
           '/admin/books'     => {
-            :GET=>admin_book_list_app,
-            :POST=>admin_book_create_app,
+            'GET'=>admin_book_list_app,
+            'POST'=>admin_book_create_app,
           },
         }
         _.ok {@variable_urlpath_list} == [
@@ -405,9 +392,9 @@ describe Rack::JetRouter do
           [%r'\A/api/books/([^./]+)/edit\z', ['id'], book_edit_api],
           [%r'\A/api/books/([^./]+)/comments\z',          ['book_id'], comment_create_api],
           [%r'\A/api/books/([^./]+)/comments/([^./]+)\z', ['book_id', 'comment_id'], comment_update_api],
-          [%r'\A/admin/books/([^./]+)\z',    ['id'], {:GET    => admin_book_show_app,
-                                                      :PUT    => admin_book_update_app,
-                                                      :DELETE => admin_book_delete_app}],
+          [%r'\A/admin/books/([^./]+)\z',    ['id'], {'GET'    => admin_book_show_app,
+                                                      'PUT'    => admin_book_update_app,
+                                                      'DELETE' => admin_book_delete_app}],
         ]
       end
     end
@@ -431,7 +418,7 @@ describe Rack::JetRouter do
     it "[!24khb] finds in fixed urlpaths at first." do
       ok {jet_router.find('/')}            == [welcome_app, nil]
       ok {jet_router.find('/api/books')}   == [book_list_api, nil]
-      dict = {:GET=>admin_book_list_app, :POST=>admin_book_create_app}
+      dict = {'GET'=>admin_book_list_app, 'POST'=>admin_book_create_app}
       ok {jet_router.find('/admin/books')} == [dict, nil]
     end
 
@@ -610,6 +597,19 @@ describe Rack::JetRouter do
       env = new_env(:GET,    '/admin/books/123')
       jet_router.call(env)
       ok {env['rack.urlpath_params']} == {"id"=>"123"}
+    end
+
+  end
+
+
+  describe 'REQUEST_METHODS' do
+
+    it "[!haggu] contains available request methods." do
+      Rack::JetRouter::REQUEST_METHODS.each do |k, v|
+        ok {k}.is_a?(String)
+        ok {v}.is_a?(Symbol)
+        ok {v.to_s} == k
+      end
     end
 
   end

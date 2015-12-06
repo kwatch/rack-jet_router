@@ -60,10 +60,13 @@ urlpath_mapping = [
 
 router = Rack::JetRouter.new(urlpath_mapping)
 router.find('/api/books/123')
-    #=> [{GET: BookShowAPI, PUT: BookUpdateAPI}, {"id"=>"123", "format"=>nil}]
+    #=> [{"GET"=>BookShowAPI, "PUT"=>BookUpdateAPI}, {"id"=>"123", "format"=>nil}]
 
 status, headers, body = router.call(env)
 ```
+
+Notice that `{GET: ..., PUT: ...}` is converted into `{"GET"=>..., "PUT"=>...}`
+automatically when passing to `Rack::JetRouter.new()`.
 
 
 ### #3: RESTful Framework
@@ -103,10 +106,10 @@ urlpath_mapping = [
 ]
 router = Rack::JetRouter.new(urlpath_mapping)
 p router.find('/api/books/123')
-    #=> [{:GET=>[BooksAPI, :show], :PUT=>..., :DELETE=>...}, {"id"=>"123"}]
+    #=> [{"GET"=>[BooksAPI, :show], "PUT"=>..., "DELETE"=>...}, {"id"=>"123"}]
 
 dict, args = router.find('/api/books/123')
-klass, action = dict[:GET]
+klass, action = dict["GET"]
 handler = klass.new(Rack::Request.new(env), Rack::Response.new)
 handler.__send__(action, args)
 ```
