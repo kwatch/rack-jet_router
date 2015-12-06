@@ -396,8 +396,8 @@ describe Rack::JetRouter do
           '/api/books'       => book_list_api,
           '/api/books/new'   => book_new_api,
           '/admin/books'     => {
-            :GET=>admin_book_list_app,
-            :POST=>admin_book_create_app,
+            'GET'=>admin_book_list_app,
+            'POST'=>admin_book_create_app,
           },
         }
         _.ok {@variable_urlpath_list} == [
@@ -405,9 +405,9 @@ describe Rack::JetRouter do
           [%r'\A/api/books/([^./]+)/edit\z', ['id'], book_edit_api],
           [%r'\A/api/books/([^./]+)/comments\z',          ['book_id'], comment_create_api],
           [%r'\A/api/books/([^./]+)/comments/([^./]+)\z', ['book_id', 'comment_id'], comment_update_api],
-          [%r'\A/admin/books/([^./]+)\z',    ['id'], {:GET    => admin_book_show_app,
-                                                      :PUT    => admin_book_update_app,
-                                                      :DELETE => admin_book_delete_app}],
+          [%r'\A/admin/books/([^./]+)\z',    ['id'], {'GET'    => admin_book_show_app,
+                                                      'PUT'    => admin_book_update_app,
+                                                      'DELETE' => admin_book_delete_app}],
         ]
       end
     end
@@ -431,7 +431,7 @@ describe Rack::JetRouter do
     it "[!24khb] finds in fixed urlpaths at first." do
       ok {jet_router.find('/')}            == [welcome_app, nil]
       ok {jet_router.find('/api/books')}   == [book_list_api, nil]
-      dict = {:GET=>admin_book_list_app, :POST=>admin_book_create_app}
+      dict = {'GET'=>admin_book_list_app, 'POST'=>admin_book_create_app}
       ok {jet_router.find('/admin/books')} == [dict, nil]
     end
 

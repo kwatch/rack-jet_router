@@ -99,9 +99,8 @@ module Rack
         #; [!ys1e2] uses GET method when HEAD is not mapped.
         #; [!2hx6j] try ANY method when request method is not mapped.
         dict = app
-        req_meth = REQUEST_METHODS[env['REQUEST_METHOD']]
-        return error_not_allowed(env) unless req_meth
-        app = dict[req_meth] || (req_meth == :HEAD ? dict[:GET] : nil) || dict[:ANY]
+        req_meth = env['REQUEST_METHOD']
+        app = dict[req_meth] || (req_meth == 'HEAD' ? dict['GET'] : nil) || dict['ANY']
         return error_not_allowed(env) unless app
       end
       #; [!2c32f] stores urlpath parameters as env['rack.urlpath_params'].
