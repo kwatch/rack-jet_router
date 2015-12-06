@@ -305,23 +305,23 @@ describe Rack::JetRouter do
 
     describe "[!guhdc] if mapping dict is specified..." do
 
-      it "[!r7cmk] converts keys from string into symbol." do
+      it "[!r7cmk] converts keys into string." do
         mapping = [
-          ['/books', {"GET"=>book_list_api, "POST"=>book_create_api}]
+          ['/books', {:GET=>book_list_api, :POST=>book_create_api}]
         ]
         Rack::JetRouter.new([]).instance_exec(self) do |_|
           rexp, dict, list = compile_mapping(mapping)
-          _.ok {dict['/books']} == {:GET=>book_list_api, :POST=>book_create_api}
+          _.ok {dict['/books']} == {'GET'=>book_list_api, 'POST'=>book_create_api}
         end
       end
 
-      it "[!z9kww] allows :ANY as request method." do
+      it "[!z9kww] allows 'ANY' as request method." do
         mapping = [
-          ['/books', {:ANY=>book_list_api, :POST=>book_create_api}]
+          ['/books', {'ANY'=>book_list_api, 'POST'=>book_create_api}]
         ]
         Rack::JetRouter.new([]).instance_exec(self) do |_|
           rexp, dict, list = compile_mapping(mapping)
-          _.ok {dict['/books']} == {:ANY=>book_list_api, :POST=>book_create_api}
+          _.ok {dict['/books']} == {'ANY'=>book_list_api, 'POST'=>book_create_api}
         end
       end
 

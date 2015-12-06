@@ -224,7 +224,7 @@ module Rack
         else
           #; [!guhdc] if mapping dict is specified...
           if obj.is_a?(Hash)
-            obj = _symbolize_mapping_keys(obj)
+            obj = normalize_mapping_keys(obj)
           end
           #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
           full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, param_pat2)
@@ -288,15 +288,15 @@ module Rack
       end
     end
 
-    def _symbolize_mapping_keys(dict)
-      #; [!r7cmk] converts keys from string into symbol.
-      #; [!z9kww] allows :ANY as request method.
+    def normalize_mapping_keys(dict)
+      #; [!r7cmk] converts keys into string.
+      #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
       request_methods = REQUEST_METHODS
       return dict.each_with_object({}) do |(meth, app), newdict|
-        sym = request_methods[meth.to_s] || (meth.to_s == 'ANY' ? :ANY : nil)  or
+        request_methods[meth.to_s] || meth.to_s == 'ANY'  or
           raise ArgumentError.new("#{meth.inspect}: unknown request method.")
-        newdict[sym] = app
+        newdict[meth.to_s] = app
       end
     end
 
