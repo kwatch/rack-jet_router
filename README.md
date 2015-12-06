@@ -14,23 +14,24 @@ derived from [Keight.rb](https://github.com/kwatch/keight/tree/ruby).
 require 'rack'
 require 'rack/jet_router'
 
+## Assume that welcome_app, books_api, ... are Rack application.
 urlpath_mapping = [
-    ['/'                       , WelcomeApp],
+    ['/'                       , welcome_app],
     ['/api', [
         ['/books', [
-            [''                , BooksAPI],
-            ['/:id(.:format)'  , BookAPI],
-            ['/:book_id/comments/:comment_id', CommentAPI],
+            [''                , books_api],
+            ['/:id(.:format)'  , book_api],
+            ['/:book_id/comments/:comment_id', comment_api],
         ]],
     ]],
     ['/admin', [
-        ['/books'              , AdminBooksApp],
+        ['/books'              , admin_books_app],
     ]],
 ]
 
 router = Rack::JetRouter.new(urlpath_mapping)
 p router.find('/api/books/123.html')
-    #=> [BookAPI, {"id"=>"123", "format"=>"html"}]
+    #=> [book_api, {"id"=>"123", "format"=>"html"}]
 
 status, headers, body = router.call(env)
 ```
@@ -44,23 +45,24 @@ status, headers, body = router.call(env)
 require 'rack'
 require 'rack/jet_router'
 
+## Assume that welcome_app, book_list_api, ... are Rack application.
 urlpath_mapping = [
-    ['/'                       , {GET: WelcomeApp}],
+    ['/'                       , {GET: welcome_app}],
     ['/api', [
         ['/books', [
-            [''                , {GET: BookListAPI, POST: BookCreateAPI}],
-            ['/:id(.:format)'  , {GET: BookShowAPI, PUT: BookUpdateAPI}],
-            ['/:book_id/comments/:comment_id', {POST: CommentCreateAPI}],
+            [''                , {GET: book_list_api, POST: book_create_api}],
+            ['/:id(.:format)'  , {GET: book_show_api, PUT: book_update_api}],
+            ['/:book_id/comments/:comment_id', {POST: comment_create_api}],
         ]],
     ]],
     ['/admin', [
-        ['/books'              , {ANY: AdminBooksApp}],
+        ['/books'              , {ANY: admin_books_app}],
     ]],
 ]
 
 router = Rack::JetRouter.new(urlpath_mapping)
-router.find('/api/books/123')
-    #=> [{"GET"=>BookShowAPI, "PUT"=>BookUpdateAPI}, {"id"=>"123", "format"=>nil}]
+p router.find('/api/books/123')
+    #=> [{"GET"=>book_show_api, "PUT"=>book_update_api}, {"id"=>"123", "format"=>nil}]
 
 status, headers, body = router.call(env)
 ```
