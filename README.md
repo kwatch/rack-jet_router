@@ -4,6 +4,29 @@ Rack::JetRouter is crazy-fast router library for Rack application,
 derived from [Keight.rb](https://github.com/kwatch/keight/tree/ruby).
 
 
+## Benchmark
+
+Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/dev/bench/bench.rb).
+
+```
+## Ranking                        real[ns]
+(Rack plain)  /api/hello             1.555 (100.0%) ********************
+(JetRouter)   /api/hello             1.597 ( 97.4%) *******************
+(JetRouter)   /api/hello/123         6.424 ( 24.2%) *****
+(R::Req+Res)  /api/hello             9.837 ( 15.8%) ***
+(Sinatra)     /api/hello           106.965 (  1.5%)
+(Sinatra)     /api/hello/123       116.672 (  1.3%)
+```
+
+* If URL path has no path parameter (such as `/api/hello`),
+  Rack::JetRouter is just a litte slower than plain Rack application.
+* If URL path contains path parameter (such as `/api/hello/:id`),
+  Rack::JetRouter becomes slower, but it is enough small (about 6.4ns/req).
+* Overhead of Rack::JetRouter is smaller than that of Rack::Reqeust +
+  Rack::Response.
+* Sinatra is too slow.
+
+
 ## Examples
 
 ### #1: Depends only on Request Path
