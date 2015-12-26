@@ -53,7 +53,7 @@ urlpath_mapping = [
 ]
 
 router = Rack::JetRouter.new(urlpath_mapping)
-p router.find('/api/books/123.html')
+p router.lookup('/api/books/123.html')
     #=> [book_api, {"id"=>"123", "format"=>"html"}]
 
 status, headers, body = router.call(env)
@@ -84,7 +84,7 @@ urlpath_mapping = [
 ]
 
 router = Rack::JetRouter.new(urlpath_mapping)
-p router.find('/api/books/123')
+p router.lookup('/api/books/123')
     #=> [{"GET"=>book_show_api, "PUT"=>book_update_api}, {"id"=>"123", "format"=>nil}]
 
 status, headers, body = router.call(env)
@@ -130,10 +130,10 @@ urlpath_mapping = [
     ]],
 ]
 router = Rack::JetRouter.new(urlpath_mapping)
-p router.find('/api/books/123')
+p router.lookup('/api/books/123')
     #=> [{"GET"=>[BooksAPI, :show], "PUT"=>..., "DELETE"=>...}, {"id"=>"123"}]
 
-dict, args = router.find('/api/books/123')
+dict, args = router.lookup('/api/books/123')
 klass, action = dict["GET"]
 handler = klass.new(Rack::Request.new(env), Rack::Response.new)
 handler.__send__(action, args)
@@ -189,7 +189,7 @@ as well as fixed ones. It will make routing much faster.
 ```ruby
 ## Enable variable urlpath cache.
 router = Rack::JetRouter.new(urlpath_mapping, urlpath_cache_size: 200)
-p router.find('/api/books/123')   # caches even varaible urlpath
+p router.lookup('/api/books/123')   # caches even varaible urlpath
 ```
 
 
