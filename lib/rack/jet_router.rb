@@ -190,7 +190,7 @@ module Rack
 
     def _compile_array(mapping, rexp_buf, base_urlpath_pat, urlpath_pat,
                        param_pat1, param_pat2, fixed_dict, variable_list)
-      rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
+      rexp_str, _ = compile_urlpath_pattern(urlpath_pat, false)
       rexp_buf << rexp_str
       rexp_buf << '(?:'
       len = rexp_buf.length
@@ -227,13 +227,13 @@ module Rack
       end
       #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
       full_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}"
-      full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, param_pat2)
+      full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, true)
       fixed_pattern = param_names.nil?
       if fixed_pattern
         fixed_dict[full_urlpath_pat] = obj
       #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
       else
-        rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
+        rexp_str, _ = compile_urlpath_pattern(urlpath_pat, false)
         rexp_buf << rexp_str << '(\z)'
         full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
         variable_list << [full_urlpath_rexp, param_names, obj]
@@ -241,8 +241,9 @@ module Rack
     end
 
     ## Compiles '/books/:id' into ['/books/([^./]+)', ["id"]].
-    def compile_urlpath_pattern(urlpath_pat, param_pat='([^./]+)')
+    def compile_urlpath_pattern(urlpath_pat, enable_capture=true)
       s = "".dup()
+      param_pat = enable_capture ? '([^./]+)' : '[^./]+'
       param_names = []
       pos = 0
       urlpath_pat.scan(/:(\w+)|\((.*?)\)/) do |name, optional|
