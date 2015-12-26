@@ -192,15 +192,15 @@ module Rack
     def _compile_mapping(mapping, rexp_buf, prefix_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       rexp_buf << '(?:'
       len = rexp_buf.length
-      mapping.each do |urlpath_pat, obj|
+      mapping.each do |child_urlpath_pat, obj|
         rexp_buf << '|' if rexp_buf.length != len
-        full_urlpath_pat = "#{prefix_pat}#{urlpath_pat}"
+        full_urlpath_pat = "#{prefix_pat}#{child_urlpath_pat}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
-          _compile_array(obj, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+          _compile_array(obj, rexp_buf, child_urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         #; [!2ktpf] handles end-point.
         else
-          _compile_object(obj, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+          _compile_object(obj, rexp_buf, child_urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         end
       end
       #; [!gfxgr] deletes unnecessary grouping.
