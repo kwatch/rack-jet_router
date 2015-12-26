@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-require 'rack'              rescue nil
-require 'rack/jet_router'   rescue nil
-require 'rack/multiplexer'  rescue nil
-require 'sinatra/base'      rescue nil
-require 'keight'            rescue nil
+require 'rack'              rescue nil  unless $rack == '0'
+require 'rack/jet_router'   rescue nil  unless $jet  == '0'
+require 'rack/multiplexer'  rescue nil  unless $mpx  == '0'
+require 'sinatra/base'      rescue nil  unless $sina == '0'
+require 'keight'            rescue nil  unless $k8   == '0'
 
 flag_rack = flag_sinatra = flag_multiplexer = flag_keight = false
 flag_rack        = defined?(Rack)
