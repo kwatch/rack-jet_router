@@ -188,7 +188,7 @@ module Rack
       return urlpath_rexp, fixed_urlpaths, variable_urlpaths
     end
 
-    def _compile_array(mapping, rexp_buf, urlpath_pat, base_urlpath_pat,
+    def _compile_array(mapping, rexp_buf, base_urlpath_pat, urlpath_pat,
                        param_pat1, param_pat2, fixed_dict, variable_list)
       rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
       rexp_buf << rexp_str
@@ -199,11 +199,11 @@ module Rack
         curr_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
-          _compile_array(obj, rexp_buf, child_urlpath_pat, curr_urlpath_pat,
+          _compile_array(obj, rexp_buf, curr_urlpath_pat, child_urlpath_pat,
                          param_pat1, param_pat2, fixed_dict, variable_list)
         #; [!2ktpf] handles end-point.
         else
-          _compile_object(obj, rexp_buf, child_urlpath_pat, curr_urlpath_pat,
+          _compile_object(obj, rexp_buf, curr_urlpath_pat, child_urlpath_pat,
                           param_pat1, param_pat2, fixed_dict, variable_list)
         end
       end
@@ -219,7 +219,7 @@ module Rack
       end
     end
 
-    def _compile_object(obj, rexp_buf, urlpath_pat, base_urlpath_pat,
+    def _compile_object(obj, rexp_buf, base_urlpath_pat, urlpath_pat,
                         param_pat1, param_pat2, fixed_dict, variable_list)
       #; [!guhdc] if mapping dict is specified...
       if obj.is_a?(Hash)
