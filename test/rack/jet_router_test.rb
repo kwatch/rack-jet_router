@@ -186,6 +186,35 @@ describe Rack::JetRouter do
       end
     end
 
+    it "[!bh9lo] deletes unnecessary grouping which contains only an element." do
+      mapping = [
+        ['/api', [
+          ['/books', [
+            ['/:id'        , book_show_api],
+          ]],
+        ]],
+      ]
+      expected = '
+          \A
+          (?:
+              /api
+                  (?:
+                      /books
+                          /[^./]+(\z)
+                  )
+          )
+          \z
+      '.gsub(/\s+/, '')
+      jet_router.instance_exec(self) do |_|
+        rexp, dict, list = compile_mapping(mapping)
+        _.ok {rexp} == Regexp.new(expected)
+        _.ok {dict} == {}
+        _.ok {list} == [
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api],
+        ]
+      end
+    end
+
     it "[!l63vu] handles urlpath pattern as fixed when no urlpath params." do
       mapping = [
         ['/api/books'      , book_list_api],

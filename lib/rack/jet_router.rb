@@ -214,6 +214,10 @@ module Rack
         #; [!pv2au] deletes unnecessary urlpath regexp.
         x = rexp_buf.pop()    # delete rexp_str
         x == rexp_str  or raise "assertion failed"
+      #; [!bh9lo] deletes unnecessary grouping which contains only an element.
+      elsif rexp_buf.length == len + 1
+        rexp_buf[-2] == '(?:'  or raise "assertion failed: rexp_buf[-2]=#{rexp_buf[-2].inspect}"
+        rexp_buf[-2] = ''
       else
         rexp_buf << ')'
       end
@@ -234,7 +238,7 @@ module Rack
       #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
       else
         rexp_str, _ = compile_urlpath_pattern(urlpath_pat, false)
-        rexp_buf << rexp_str << '(\z)'
+        rexp_buf << (rexp_str << '(\z)')
         full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
         variable_list << [full_urlpath_rexp, param_names, obj]
       end
