@@ -158,6 +158,15 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   target_urlpaths = ["/api/hello", "/api/hello/123"]
   tuple = nil
 
+  puts ""
+  puts "** rack            : #{Rack.release}"               if flag_rack
+  puts "** rack-jet_router : #{Rack::JetRouter::RELEASE rescue '-'}"   if flag_jetrouter
+  puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION}" if flag_multiplex
+  puts "** sinatra         : #{Sinatra::VERSION}"           if flag_sinatra
+  puts "** keight          : #{K8::RELEASE rescue '-'}"  if flag_keight
+  puts ""
+  puts "** N=#{N}"
+
   ### empty task
   bm.empty_task do
     newenv("/api/hello")
