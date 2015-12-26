@@ -198,15 +198,7 @@ module Rack
         full_urlpath_pat = "#{prefix_pat}#{urlpath_pat}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
-          rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
-          rexp_buf << rexp_str
-          len2 = rexp_buf.length
-          _compile_mapping(obj, rexp_buf, full_urlpath_pat, fixed_dict, variable_list)
-          #; [!pv2au] deletes unnecessary urlpath regexp.
-          if rexp_buf.length == len2
-            x = rexp_buf.pop()
-            x == rexp_str  or raise "assertion failed"
-          end
+          _compile_array(obj, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         #; [!2ktpf] handles end-point.
         else
           #; [!guhdc] if mapping dict is specified...
@@ -233,6 +225,18 @@ module Rack
         x == '(?:'  or raise "assertion failed"
       else
         rexp_buf << ')'
+      end
+    end
+
+    def _compile_array(mapping, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+      rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
+      rexp_buf << rexp_str
+      len = rexp_buf.length
+      _compile_mapping(mapping, rexp_buf, full_urlpath_pat, fixed_dict, variable_list)
+      #; [!pv2au] deletes unnecessary urlpath regexp.
+      if rexp_buf.length == len
+        x = rexp_buf.pop()
+        x == rexp_str  or raise "assertion failed"
       end
     end
 
