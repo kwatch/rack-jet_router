@@ -189,12 +189,12 @@ module Rack
       return urlpath_rexp, fixed_urlpaths, variable_urlpaths
     end
 
-    def _compile_mapping(mapping, rexp_buf, prefix_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+    def _compile_mapping(mapping, rexp_buf, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       rexp_buf << '(?:'
       len = rexp_buf.length
       mapping.each do |child_urlpath_pat, obj|
         rexp_buf << '|' if rexp_buf.length != len
-        full_urlpath_pat = "#{prefix_pat}#{child_urlpath_pat}"
+        full_urlpath_pat = "#{base_urlpath_pat}#{child_urlpath_pat}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
           _compile_array(obj, rexp_buf, child_urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
