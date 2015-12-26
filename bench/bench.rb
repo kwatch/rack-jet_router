@@ -57,14 +57,20 @@ if flag_jetrouter
     end
   end
 
-  jet_router = Rack::JetRouter.new([
+  jet_router = proc {
+    mapping = [
       ['/api', [
           ['/hello', [
               ['',        JetHelloApp1.new],
               ['/:id',    JetHelloApp2.new],
           ]],
       ]],
-  ], urlpath_cache_size: 0)
+    ]
+    opts = {
+      urlpath_cache_size: 0,
+    }
+    Rack::JetRouter.new(mapping, opts)
+  }.call()
 
 end
 
