@@ -284,6 +284,16 @@ module Rack
       end
     end
 
+    def range_of_urlpath_param(urlpath_pattern)      # ex: '/books/:id/edit'
+      #; [!syrdh] returns Range object when urlpath_pattern contains just one param.
+      #; [!skh4z] returns nil when urlpath_pattern contains more than two params.
+      #; [!acj5b] returns nil when urlpath_pattern contains no params.
+      rexp = /:\w+|\(.*?\)/
+      arr = urlpath_pattern.split(rexp, -1)          # ex: ['/books/', '/edit']
+      return nil unless arr.length == 2
+      return (arr[0].length .. -(arr[1].length+1))   # ex: 7..-6  (Range object)
+    end
+
     def normalize_mapping_keys(dict)
       #; [!r7cmk] converts keys into string.
       #; [!z9kww] allows 'ANY' as request method.

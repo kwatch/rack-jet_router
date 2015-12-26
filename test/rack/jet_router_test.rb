@@ -64,6 +64,35 @@ describe Rack::JetRouter do
   end
 
 
+  describe '#range_of_urlpath_param()' do
+
+    it "[!syrdh] returns Range object when urlpath_pattern contains just one param." do
+      jet_router.instance_exec(self) do |_|
+        r1 = range_of_urlpath_param('/books/:id')
+        _.ok {r1} == (7..-1)
+        _.ok {'/books/123'[r1]} == '123'
+        r2 = range_of_urlpath_param('/books/:id.html')
+        _.ok {r2} == (7..-6)
+        _.ok {'/books/4567.html'[r2]} == '4567'
+      end
+    end
+
+    it "[!skh4z] returns nil when urlpath_pattern contains more than two params." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {range_of_urlpath_param('/books/:book_id/comments/:comment_id')} == nil
+        _.ok {range_of_urlpath_param('/books/:id(:format)')} == nil
+      end
+    end
+
+    it "[!acj5b] returns nil when urlpath_pattern contains no params." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {range_of_urlpath_param('/books')} == nil
+      end
+    end
+
+  end
+
+
   describe '#compile_urlpath_pattern()' do
 
     it "[!joozm] escapes metachars with backslash in text part." do
