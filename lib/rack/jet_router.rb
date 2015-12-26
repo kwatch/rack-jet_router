@@ -119,9 +119,15 @@ module Rack
       index = m.captures.find_index('')
       return nil unless index
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj = @variable_urlpath_list[index]
-      m = full_urlpath_rexp.match(req_path)
-      param_values = m.captures
+      full_urlpath_rexp, param_names, obj, range = @variable_urlpath_list[index]
+      if range
+        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")
+        str = req_path[range]
+        param_values = [str]
+      else
+        m = full_urlpath_rexp.match(req_path)
+        param_values = m.captures
+      end
       vars = build_urlpath_parameter_vars(param_names, param_values)
       #; [!84inr] caches result when variable urlpath cache enabled.
       if cache
@@ -240,7 +246,8 @@ module Rack
         rexp_str, _ = compile_urlpath_pattern(urlpath_pat, false)
         rexp_buf << (rexp_str << '(\z)')
         full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
-        variable_list << [full_urlpath_rexp, param_names, obj]
+        range = range_of_urlpath_param(full_urlpath_pat)
+        variable_list << [full_urlpath_rexp, param_names, obj, range]
       end
     end
 

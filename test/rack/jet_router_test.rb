@@ -149,7 +149,7 @@ describe Rack::JetRouter do
           '/'                => welcome_app,
         }
         _.ok {list} == [
-          [%r'\A/books/([^./]+)\z',      ['id'], book_show_api],
+          [%r'\A/books/([^./]+)\z',      ['id'], book_show_api, (7..-1)],
         ]
       end
     end
@@ -208,7 +208,7 @@ describe Rack::JetRouter do
           '/api/books/new'   => book_new_api,
         }
         _.ok {list} == [
-          [%r'\A/api/books2/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/api/books2/([^./]+)\z',  ['id'], book_show_api, (12..-1)],
         ]
       end
     end
@@ -237,7 +237,7 @@ describe Rack::JetRouter do
         _.ok {rexp} == Regexp.new(expected)
         _.ok {dict} == {}
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -276,7 +276,7 @@ describe Rack::JetRouter do
         _.ok {dict} == {
         }
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -300,7 +300,7 @@ describe Rack::JetRouter do
           '/api/books'       => book_list_api,
         }
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -337,7 +337,7 @@ describe Rack::JetRouter do
           '/admin/api/books'       => book_list_api,
         }
         _.ok {list} == [
-          [%r'\A/admin/api/books/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/admin/api/books/([^./]+)\z',  ['id'], book_show_api, (17..-1)],
         ]
       end
     end
@@ -440,13 +440,13 @@ describe Rack::JetRouter do
           },
         }
         _.ok {@variable_urlpath_list} == [
-          [%r'\A/api/books/([^./]+)\z',      ['id'], book_show_api],
-          [%r'\A/api/books/([^./]+)/edit\z', ['id'], book_edit_api],
-          [%r'\A/api/books/([^./]+)/comments\z',          ['book_id'], comment_create_api],
-          [%r'\A/api/books/([^./]+)/comments/([^./]+)\z', ['book_id', 'comment_id'], comment_update_api],
+          [%r'\A/api/books/([^./]+)\z',      ['id'], book_show_api, (11..-1)],
+          [%r'\A/api/books/([^./]+)/edit\z', ['id'], book_edit_api, (11..-6)],
+          [%r'\A/api/books/([^./]+)/comments\z',          ['book_id'], comment_create_api, (11..-10)],
+          [%r'\A/api/books/([^./]+)/comments/([^./]+)\z', ['book_id', 'comment_id'], comment_update_api, nil],
           [%r'\A/admin/books/([^./]+)\z',    ['id'], {'GET'    => admin_book_show_app,
                                                       'PUT'    => admin_book_update_app,
-                                                      'DELETE' => admin_book_delete_app}],
+                                                      'DELETE' => admin_book_delete_app}, (13..-1)],
         ]
       end
     end
