@@ -110,9 +110,7 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
               /books/[^./]+(\z)
-          )
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -167,7 +165,7 @@ describe Rack::JetRouter do
               /api
                   (?:
                       /books2
-                          (?:/[^./]+(\z))
+                          /[^./]+(\z)
                   )
           )
           \z
@@ -240,9 +238,7 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
               /api/books/[^./]+(\z)
-          )
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -264,9 +260,7 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
               /api/books/[^./]+(\z)
-          )
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -301,7 +295,7 @@ describe Rack::JetRouter do
                       /api
                           (?:
                               /books
-                                  (?:/[^./]+(\z))
+                                  /[^./]+(\z)
                           )
                   )
           )
@@ -400,7 +394,7 @@ describe Rack::JetRouter do
             |
                 /admin
                     (?:/books
-                        (?:/[^./]+(\z))
+                        /[^./]+(\z)
                     )
             )
             \z
