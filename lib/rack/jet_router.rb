@@ -177,10 +177,9 @@ module Rack
     ## Compiles urlpath mapping. Called from '#initialize()'.
     def compile_mapping(mapping)
       rexp_buf          = ['\A']
-      prefix_pat        = ''
       fixed_urlpaths    = {}  # ex: {'/api/books'=>BooksApp}
       variable_urlpaths = []  # ex: [[%r'\A/api/books/([^./]+)\z', ['id'], BookApp]]
-      _compile_mapping(mapping, rexp_buf, prefix_pat, '[^./]+', '([^./]+)',
+      _compile_mapping(mapping, rexp_buf, '', '', '[^./]+', '([^./]+)',
                       fixed_urlpaths, variable_urlpaths)
       ## ex: %r'\A(?:/api(?:/books(?:/[^./]+(\z)|/[^./]+/edit(\z))))\z'
       rexp_buf << '\z'
@@ -189,12 +188,12 @@ module Rack
       return urlpath_rexp, fixed_urlpaths, variable_urlpaths
     end
 
-    def _compile_mapping(mapping, rexp_buf, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+    def _compile_mapping(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       rexp_buf << '(?:'
       len = rexp_buf.length
       mapping.each do |child_urlpath_pat, obj|
         rexp_buf << '|' if rexp_buf.length != len
-        full_urlpath_pat = "#{base_urlpath_pat}#{child_urlpath_pat}"
+        full_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}#{child_urlpath_pat}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
           _compile_array(obj, rexp_buf, child_urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
@@ -216,7 +215,7 @@ module Rack
       rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
       rexp_buf << rexp_str
       len = rexp_buf.length
-      _compile_mapping(mapping, rexp_buf, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+      _compile_mapping(mapping, rexp_buf, '', full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       #; [!pv2au] deletes unnecessary urlpath regexp.
       if rexp_buf.length == len
         x = rexp_buf.pop()
