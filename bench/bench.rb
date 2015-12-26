@@ -66,7 +66,8 @@ if flag_jetrouter
       ]],
     ]
     opts = {
-      urlpath_cache_size: 0,
+      urlpath_cache_size:           ($k8cache || 0).to_i,
+      enable_urlpath_param_range:   $k8range != '0',
     }
     Rack::JetRouter.new(mapping, opts)
   }.call()
@@ -150,7 +151,7 @@ end
 
 require './benchmarker'
 
-N = 100000
+N = ($N || 100000).to_i
 Benchmarker.new(:width=>33, :loop=>N) do |bm|
 
   #flag_sinatra   = false   # because too slow
