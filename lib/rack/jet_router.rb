@@ -193,13 +193,13 @@ module Rack
       len = rexp_buf.length
       mapping.each do |child_urlpath_pat, obj|
         rexp_buf << '|' if rexp_buf.length != len
-        full_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}#{child_urlpath_pat}"
+        curr_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
-          _compile_array(obj, rexp_buf, child_urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+          _compile_array(obj, rexp_buf, child_urlpath_pat, curr_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         #; [!2ktpf] handles end-point.
         else
-          _compile_object(obj, rexp_buf, child_urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+          _compile_object(obj, rexp_buf, child_urlpath_pat, curr_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         end
       end
       #; [!gfxgr] deletes unnecessary grouping.
@@ -211,11 +211,11 @@ module Rack
       end
     end
 
-    def _compile_array(mapping, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+    def _compile_array(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
       rexp_buf << rexp_str
       len = rexp_buf.length
-      _compile_mapping(mapping, rexp_buf, '', full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+      _compile_mapping(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       #; [!pv2au] deletes unnecessary urlpath regexp.
       if rexp_buf.length == len
         x = rexp_buf.pop()
@@ -223,12 +223,13 @@ module Rack
       end
     end
 
-    def _compile_object(obj, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+    def _compile_object(obj, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       #; [!guhdc] if mapping dict is specified...
       if obj.is_a?(Hash)
         obj = normalize_mapping_keys(obj)
       end
       #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+      full_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}"
       full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, param_pat2)
       fixed_pattern = param_names.nil?
       if fixed_pattern
