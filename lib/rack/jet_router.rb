@@ -201,22 +201,7 @@ module Rack
           _compile_array(obj, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         #; [!2ktpf] handles end-point.
         else
-          #; [!guhdc] if mapping dict is specified...
-          if obj.is_a?(Hash)
-            obj = normalize_mapping_keys(obj)
-          end
-          #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-          full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, param_pat2)
-          fixed_pattern = param_names.nil?
-          if fixed_pattern
-            fixed_dict[full_urlpath_pat] = obj
-          #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
-          else
-            rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
-            rexp_buf << rexp_str << '(\z)'
-            full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
-            variable_list << [full_urlpath_rexp, param_names, obj]
-          end
+          _compile_object(obj, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         end
       end
       #; [!gfxgr] deletes unnecessary grouping.
@@ -237,6 +222,25 @@ module Rack
       if rexp_buf.length == len
         x = rexp_buf.pop()
         x == rexp_str  or raise "assertion failed"
+      end
+    end
+
+    def _compile_object(obj, rexp_buf, urlpath_pat, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+      #; [!guhdc] if mapping dict is specified...
+      if obj.is_a?(Hash)
+        obj = normalize_mapping_keys(obj)
+      end
+      #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+      full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, param_pat2)
+      fixed_pattern = param_names.nil?
+      if fixed_pattern
+        fixed_dict[full_urlpath_pat] = obj
+      #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
+      else
+        rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
+        rexp_buf << rexp_str << '(\z)'
+        full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
+        variable_list << [full_urlpath_rexp, param_names, obj]
       end
     end
 
