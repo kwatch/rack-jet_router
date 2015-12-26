@@ -198,7 +198,7 @@ module Rack
         curr_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
-          _compile_array(obj, rexp_buf, child_urlpath_pat, curr_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+          _compile_mapping(obj, rexp_buf, child_urlpath_pat, curr_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
         #; [!2ktpf] handles end-point.
         else
           _compile_object(obj, rexp_buf, child_urlpath_pat, curr_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
@@ -214,10 +214,6 @@ module Rack
       else
         rexp_buf << ')'
       end
-    end
-
-    def _compile_array(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
-      _compile_mapping(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
     end
 
     def _compile_object(obj, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
