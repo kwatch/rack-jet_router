@@ -180,7 +180,8 @@ module Rack
       prefix_pat        = ''
       fixed_urlpaths    = {}  # ex: {'/api/books'=>BooksApp}
       variable_urlpaths = []  # ex: [[%r'\A/api/books/([^./]+)\z', ['id'], BookApp]]
-      _compile_mapping(mapping, rexp_buf, prefix_pat, fixed_urlpaths, variable_urlpaths)
+      _compile_mapping(mapping, rexp_buf, prefix_pat, '[^./]+', '([^./]+)',
+                      fixed_urlpaths, variable_urlpaths)
       ## ex: %r'\A(?:/api(?:/books(?:/[^./]+(\z)|/[^./]+/edit(\z))))\z'
       rexp_buf << '\z'
       urlpath_rexp = Regexp.new(rexp_buf.join())
@@ -188,9 +189,7 @@ module Rack
       return urlpath_rexp, fixed_urlpaths, variable_urlpaths
     end
 
-    def _compile_mapping(mapping, rexp_buf, prefix_pat, fixed_dict, variable_list)
-      param_pat1 = '[^./]+'
-      param_pat2 = '([^./]+)'
+    def _compile_mapping(mapping, rexp_buf, prefix_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       rexp_buf << '(?:'
       len = rexp_buf.length
       mapping.each do |urlpath_pat, obj|
@@ -217,7 +216,7 @@ module Rack
       rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
       rexp_buf << rexp_str
       len = rexp_buf.length
-      _compile_mapping(mapping, rexp_buf, full_urlpath_pat, fixed_dict, variable_list)
+      _compile_mapping(mapping, rexp_buf, full_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
       #; [!pv2au] deletes unnecessary urlpath regexp.
       if rexp_buf.length == len
         x = rexp_buf.pop()
