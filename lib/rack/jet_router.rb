@@ -55,7 +55,9 @@ module Rack
   ##
   class JetRouter
 
-    def initialize(mapping, urlpath_cache_size: 0)
+    def initialize(mapping, urlpath_cache_size: 0,
+                            enable_urlpath_param_range: true)
+      @enable_urlpath_param_range = enable_urlpath_param_range
       #; [!u2ff4] compiles urlpath mapping.
       (@urlpath_rexp,          # ex: {'/api/books'=>BooksApp}
        @fixed_urlpath_dict,    # ex: [[%r'\A/api/books/([^./]+)\z', ['id'], BookApp]]
@@ -246,7 +248,7 @@ module Rack
         rexp_str, _ = compile_urlpath_pattern(urlpath_pat, false)
         rexp_buf << (rexp_str << '(\z)')
         full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
-        range = range_of_urlpath_param(full_urlpath_pat)
+        range = @enable_urlpath_param_range ? range_of_urlpath_param(full_urlpath_pat) : nil
         variable_list << [full_urlpath_rexp, param_names, obj, range]
       end
     end
