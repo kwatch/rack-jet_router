@@ -55,6 +55,8 @@ module Rack
   ##
   class JetRouter
 
+    RELEASE = '$Release: 0.0.0 $'.split()[1]
+
     def initialize(mapping, urlpath_cache_size: 0,
                             enable_urlpath_param_range: true)
       @enable_urlpath_param_range = enable_urlpath_param_range
