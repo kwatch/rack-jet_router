@@ -189,6 +189,8 @@ module Rack
     end
 
     def _compile_mapping(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
+      rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
+      rexp_buf << rexp_str
       rexp_buf << '(?:'
       len = rexp_buf.length
       mapping.each do |child_urlpath_pat, obj|
@@ -206,21 +208,16 @@ module Rack
       if rexp_buf.length == len
         x = rexp_buf.pop()    # delete '(?:'
         x == '(?:'  or raise "assertion failed"
+        #; [!pv2au] deletes unnecessary urlpath regexp.
+        x = rexp_buf.pop()    # delete rexp_str
+        x == rexp_str  or raise "assertion failed"
       else
         rexp_buf << ')'
       end
     end
 
     def _compile_array(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
-      rexp_str, _ = compile_urlpath_pattern(urlpath_pat, param_pat1)
-      rexp_buf << rexp_str
-      len = rexp_buf.length
       _compile_mapping(mapping, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
-      #; [!pv2au] deletes unnecessary urlpath regexp.
-      if rexp_buf.length == len
-        x = rexp_buf.pop()
-        x == rexp_str  or raise "assertion failed"
-      end
     end
 
     def _compile_object(obj, rexp_buf, urlpath_pat, base_urlpath_pat, param_pat1, param_pat2, fixed_dict, variable_list)
