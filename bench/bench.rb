@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-['rack', 'rack/jet_router', 'rack/multiplexer', 'sinatra/base', 'keight'].each do |x|
-  begin
-    require x
-  rescue LoadError
-  end
-end
+require 'rack'              rescue nil
+require 'rack/jet_router'   rescue nil
+require 'rack/multiplexer'  rescue nil
+require 'sinatra/base'      rescue nil
+require 'keight'            rescue nil
 
 flag_rack = flag_sinatra = flag_multiplexer = flag_keight = false
 flag_rack        = defined?(Rack)
