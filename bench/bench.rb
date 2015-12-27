@@ -261,42 +261,67 @@ __END__
 $ ruby -I../lib  bench.rb
 benchmarker.rb:   release 1.0.0
 RUBY_VERSION:     2.3.0
-RUBY_PATCHLEVEL:  -1
-RUBY_PLATFORM:    x86_64-darwin14
+RUBY_PATCHLEVEL:  0
+RUBY_PLATFORM:    x86_64-darwin15
+
+** rack            : 1.6.4
+** rack-jet_router : 1.1.0
+** rack-multiplexer: 0.0.8
+** sinatra         : 1.4.6
+** keight          : 0.2.0
+
+** N=1000000
 
 ##                                     user       sys     total      real
-(Empty)                              0.6900    0.0100    0.7000    0.6986
-(Rack plain)  /api/hello             0.1500   -0.0000    0.1500    0.1555
-(R::Req+Res)  /api/hello             0.9800    0.0000    0.9800    0.9837
-(JetRouter)   /api/hello             0.1600   -0.0100    0.1500    0.1597
-(JetRouter)   /api/hello/123         0.6400   -0.0000    0.6400    0.6424
-(Multiplexer) /api/hello             0.5100   -0.0000    0.5100    0.5097
-(Multiplexer) /api/hello/123         1.7300    0.0000    1.7300    1.7334
-(Sinatra)     /api/hello             8.8500    1.8400   10.6900   10.6965
-(Sinatra)     /api/hello/123         9.8000    1.8600   11.6600   11.6672
-(Keight.rb)   /api/hello             0.7000    0.0000    0.7000    0.6931
-(Keight.rb)   /api/hello/123         1.1000   -0.0000    1.1000    1.0954
+##                                     user       sys     total      real
+(Empty)                              6.8300    0.0600    6.8900    6.9270
+(Rack plain)  /api/aaa01             1.0400    0.0200    1.0600    1.0619
+(Rack plain)  /api/aaa01/123         0.9000   -0.0000    0.9000    0.8729
+(Rack plain)  /api/zzz26             0.8400   -0.0100    0.8300    0.7978
+(Rack plain)  /api/zzz26/789         0.8400   -0.0200    0.8200    0.7930
+(R::Req+Res)  /api/aaa01             9.5600   -0.0000    9.5600    9.5361
+(R::Req+Res)  /api/aaa01/123         9.5600   -0.0100    9.5500    9.5321
+(R::Req+Res)  /api/zzz26             9.8400   -0.0000    9.8400    9.8096
+(R::Req+Res)  /api/zzz26/789         9.6000   -0.0100    9.5900    9.5697
+(JetRouter)   /api/aaa01             1.3600   -0.0100    1.3500    1.3231
+(JetRouter)   /api/aaa01/123         5.9900    0.0200    6.0100    5.9796
+(JetRouter)   /api/zzz26             1.4500   -0.0100    1.4400    1.4089
+(JetRouter)   /api/zzz26/789         6.5200    0.0200    6.5400    6.5142
+(Multiplexer) /api/aaa01             5.8900    0.0400    5.9300    5.9073
+(Multiplexer) /api/aaa01/123        18.1400    0.0800   18.2200   18.2102
+(Multiplexer) /api/zzz26            23.7700   -0.0400   23.7300   24.4013
+(Multiplexer) /api/zzz26/789        36.1800   -0.0200   36.1600   36.1558
+(Sinatra)     /api/aaa01            86.6500   18.0500  104.7000  104.7575
+(Sinatra)     /api/aaa01/123        97.0900   18.4900  115.5800  115.8220
+(Sinatra)     /api/zzz26           126.9900   18.5100  145.5000  145.5943
+(Sinatra)     /api/zzz26/789       136.7700   18.6400  155.4100  155.5191
+(Keight.rb)   /api/aaa01             6.4800   -0.0100    6.4700    6.4314
+(Keight.rb)   /api/aaa01/123        10.2600    0.0000   10.2600   10.2339
+(Keight.rb)   /api/zzz26             6.6200   -0.0100    6.6100    6.5769
+(Keight.rb)   /api/zzz26/789        10.8700    0.0100   10.8800   10.8545
 
 ## Ranking                             real
-(Rack plain)  /api/hello             0.1555 (100.0%) ********************
-(JetRouter)   /api/hello             0.1597 ( 97.4%) *******************
-(Multiplexer) /api/hello             0.5097 ( 30.5%) ******
-(JetRouter)   /api/hello/123         0.6424 ( 24.2%) *****
-(Keight.rb)   /api/hello             0.6931 ( 22.4%) ****
-(R::Req+Res)  /api/hello             0.9837 ( 15.8%) ***
-(Keight.rb)   /api/hello/123         1.0954 ( 14.2%) ***
-(Multiplexer) /api/hello/123         1.7334 (  9.0%) **
-(Sinatra)     /api/hello            10.6965 (  1.5%)
-(Sinatra)     /api/hello/123        11.6672 (  1.3%)
-
-## Matrix                              real     [01]     [02]     [03]     [04]     [05]     [06]     [07]     [08]     [09]     [10]
-[01] (Rack plain)  /api/hello        0.1555   100.0%   102.7%   327.8%   413.1%   445.7%   632.6%   704.5%  1114.7%  6878.8%  7503.0%
-[02] (JetRouter)   /api/hello        0.1597    97.4%   100.0%   319.3%   402.4%   434.1%   616.2%   686.1%  1085.8%  6699.9%  7307.9%
-[03] (Multiplexer) /api/hello        0.5097    30.5%    31.3%   100.0%   126.0%   136.0%   193.0%   214.9%   340.1%  2098.4%  2288.8%
-[04] (JetRouter)   /api/hello/123    0.6424    24.2%    24.9%    79.3%   100.0%   107.9%   153.1%   170.5%   269.8%  1665.0%  1816.1%
-[05] (Keight.rb)   /api/hello        0.6931    22.4%    23.0%    73.5%    92.7%   100.0%   141.9%   158.1%   250.1%  1543.3%  1683.4%
-[06] (R::Req+Res)  /api/hello        0.9837    15.8%    16.2%    51.8%    65.3%    70.5%   100.0%   111.4%   176.2%  1087.4%  1186.0%
-[07] (Keight.rb)   /api/hello/123    1.0954    14.2%    14.6%    46.5%    58.6%    63.3%    89.8%   100.0%   158.2%   976.5%  1065.1%
-[08] (Multiplexer) /api/hello/123    1.7334     9.0%     9.2%    29.4%    37.1%    40.0%    56.7%    63.2%   100.0%   617.1%   673.1%
-[09] (Sinatra)     /api/hello       10.6965     1.5%     1.5%     4.8%     6.0%     6.5%     9.2%    10.2%    16.2%   100.0%   109.1%
-[10] (Sinatra)     /api/hello/123   11.6672     1.3%     1.4%     4.4%     5.5%     5.9%     8.4%     9.4%    14.9%    91.7%   100.0%
+(Rack plain)  /api/zzz26/789         0.7930 (100.0%) ********************
+(Rack plain)  /api/zzz26             0.7978 ( 99.4%) ********************
+(Rack plain)  /api/aaa01/123         0.8729 ( 90.8%) ******************
+(Rack plain)  /api/aaa01             1.0619 ( 74.7%) ***************
+(JetRouter)   /api/aaa01             1.3231 ( 59.9%) ************
+(JetRouter)   /api/zzz26             1.4089 ( 56.3%) ***********
+(Multiplexer) /api/aaa01             5.9073 ( 13.4%) ***
+(JetRouter)   /api/aaa01/123         5.9796 ( 13.3%) ***
+(Keight.rb)   /api/aaa01             6.4314 ( 12.3%) **
+(JetRouter)   /api/zzz26/789         6.5142 ( 12.2%) **
+(Keight.rb)   /api/zzz26             6.5769 ( 12.1%) **
+(R::Req+Res)  /api/aaa01/123         9.5321 (  8.3%) **
+(R::Req+Res)  /api/aaa01             9.5361 (  8.3%) **
+(R::Req+Res)  /api/zzz26/789         9.5697 (  8.3%) **
+(R::Req+Res)  /api/zzz26             9.8096 (  8.1%) **
+(Keight.rb)   /api/aaa01/123        10.2339 (  7.7%) **
+(Keight.rb)   /api/zzz26/789        10.8545 (  7.3%) *
+(Multiplexer) /api/aaa01/123        18.2102 (  4.4%) *
+(Multiplexer) /api/zzz26            24.4013 (  3.2%) *
+(Multiplexer) /api/zzz26/789        36.1558 (  2.2%)
+(Sinatra)     /api/aaa01           104.7575 (  0.8%)
+(Sinatra)     /api/aaa01/123       115.8220 (  0.7%)
+(Sinatra)     /api/zzz26           145.5943 (  0.5%)
+(Sinatra)     /api/zzz26/789       155.5191 (  0.5%)
