@@ -248,6 +248,16 @@ $License: MIT License $
 ## History
 
 
+### 2015-12-28: Release 1.1.0
+
+* **NOTICE** `Rack::JetRouter#find()` is renamed to `#lookup()`.<br>
+  `#find()` is also available for compatibility, but not recommended.
+* Performance improved when number of URL path parameter is 1.
+* Regular expression generated is improved.
+* Benchmark script is improved to take some command-line options.
+* Document fixed.
+
+
 ### 2015-12-06: Release 1.0.1
 
 * Fix document
