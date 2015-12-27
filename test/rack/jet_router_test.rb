@@ -64,6 +64,35 @@ describe Rack::JetRouter do
   end
 
 
+  describe '#range_of_urlpath_param()' do
+
+    it "[!syrdh] returns Range object when urlpath_pattern contains just one param." do
+      jet_router.instance_exec(self) do |_|
+        r1 = range_of_urlpath_param('/books/:id')
+        _.ok {r1} == (7..-1)
+        _.ok {'/books/123'[r1]} == '123'
+        r2 = range_of_urlpath_param('/books/:id.html')
+        _.ok {r2} == (7..-6)
+        _.ok {'/books/4567.html'[r2]} == '4567'
+      end
+    end
+
+    it "[!skh4z] returns nil when urlpath_pattern contains more than two params." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {range_of_urlpath_param('/books/:book_id/comments/:comment_id')} == nil
+        _.ok {range_of_urlpath_param('/books/:id(:format)')} == nil
+      end
+    end
+
+    it "[!acj5b] returns nil when urlpath_pattern contains no params." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {range_of_urlpath_param('/books')} == nil
+      end
+    end
+
+  end
+
+
   describe '#compile_urlpath_pattern()' do
 
     it "[!joozm] escapes metachars with backslash in text part." do
@@ -110,9 +139,7 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
               /books/[^./]+(\z)
-          )
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -122,7 +149,7 @@ describe Rack::JetRouter do
           '/'                => welcome_app,
         }
         _.ok {list} == [
-          [%r'\A/books/([^./]+)\z',      ['id'], book_show_api],
+          [%r'\A/books/([^./]+)\z',      ['id'], book_show_api, (7..-1)],
         ]
       end
     end
@@ -167,7 +194,7 @@ describe Rack::JetRouter do
               /api
                   (?:
                       /books2
-                          (?:/[^./]+(\z))
+                          /[^./]+(\z)
                   )
           )
           \z
@@ -181,7 +208,36 @@ describe Rack::JetRouter do
           '/api/books/new'   => book_new_api,
         }
         _.ok {list} == [
-          [%r'\A/api/books2/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/api/books2/([^./]+)\z',  ['id'], book_show_api, (12..-1)],
+        ]
+      end
+    end
+
+    it "[!bh9lo] deletes unnecessary grouping which contains only an element." do
+      mapping = [
+        ['/api', [
+          ['/books', [
+            ['/:id'        , book_show_api],
+          ]],
+        ]],
+      ]
+      expected = '
+          \A
+          (?:
+              /api
+                  (?:
+                      /books
+                          /[^./]+(\z)
+                  )
+          )
+          \z
+      '.gsub(/\s+/, '')
+      jet_router.instance_exec(self) do |_|
+        rexp, dict, list = compile_mapping(mapping)
+        _.ok {rexp} == Regexp.new(expected)
+        _.ok {dict} == {}
+        _.ok {list} == [
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -211,9 +267,7 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
               /api/books/[^./]+(\z)
-          )
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -222,7 +276,7 @@ describe Rack::JetRouter do
         _.ok {dict} == {
         }
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -235,9 +289,7 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
               /api/books/[^./]+(\z)
-          )
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -248,7 +300,7 @@ describe Rack::JetRouter do
           '/api/books'       => book_list_api,
         }
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -272,7 +324,7 @@ describe Rack::JetRouter do
                       /api
                           (?:
                               /books
-                                  (?:/[^./]+(\z))
+                                  /[^./]+(\z)
                           )
                   )
           )
@@ -285,7 +337,7 @@ describe Rack::JetRouter do
           '/admin/api/books'       => book_list_api,
         }
         _.ok {list} == [
-          [%r'\A/admin/api/books/([^./]+)\z',  ['id'], book_show_api],
+          [%r'\A/admin/api/books/([^./]+)\z',  ['id'], book_show_api, (17..-1)],
         ]
       end
     end
@@ -371,7 +423,7 @@ describe Rack::JetRouter do
             |
                 /admin
                     (?:/books
-                        (?:/[^./]+(\z))
+                        /[^./]+(\z)
                     )
             )
             \z
@@ -388,13 +440,13 @@ describe Rack::JetRouter do
           },
         }
         _.ok {@variable_urlpath_list} == [
-          [%r'\A/api/books/([^./]+)\z',      ['id'], book_show_api],
-          [%r'\A/api/books/([^./]+)/edit\z', ['id'], book_edit_api],
-          [%r'\A/api/books/([^./]+)/comments\z',          ['book_id'], comment_create_api],
-          [%r'\A/api/books/([^./]+)/comments/([^./]+)\z', ['book_id', 'comment_id'], comment_update_api],
+          [%r'\A/api/books/([^./]+)\z',      ['id'], book_show_api, (11..-1)],
+          [%r'\A/api/books/([^./]+)/edit\z', ['id'], book_edit_api, (11..-6)],
+          [%r'\A/api/books/([^./]+)/comments\z',          ['book_id'], comment_create_api, (11..-10)],
+          [%r'\A/api/books/([^./]+)/comments/([^./]+)\z', ['book_id', 'comment_id'], comment_update_api, nil],
           [%r'\A/admin/books/([^./]+)\z',    ['id'], {'GET'    => admin_book_show_app,
                                                       'PUT'    => admin_book_update_app,
-                                                      'DELETE' => admin_book_delete_app}],
+                                                      'DELETE' => admin_book_delete_app}, (13..-1)],
         ]
       end
     end
