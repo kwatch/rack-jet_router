@@ -242,6 +242,11 @@ end
 Above methods are invoked from `Rack::JetRouter#call()`.
 
 
+## Todo
+
+* [_] support regular expression such as `/books/{id:\d+}`.
+
+
 ## Copyright and License
 
 $Copyright: copyright(c) 2015 kuwata-lab.com all rights reserved $
