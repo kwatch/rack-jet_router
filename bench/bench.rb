@@ -190,12 +190,14 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   ### Rack
   if flag_rack
     target_urlpaths.each do |x|
+      rack_app1.call(newenv(x))              # warm up
       bm.task("(Rack plain)  #{x}") do       # no routing
         tuple = rack_app1.call(newenv(x))
       end
       _chk(tuple)
     end
     target_urlpaths.each do |x|
+      rack_app4.call(newenv(x))              # warm up
       bm.task("(R::Req+Res)  #{x}") do       # no routing
         tuple = rack_app4.call(newenv(x))
       end
@@ -206,6 +208,7 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   ### Rack::JetRouter
   if flag_jetrouter
     target_urlpaths.each do |x|
+      jet_router.call(newenv(x))             # warm up
       bm.task("(JetRouter)   #{x}") do
         tuple = jet_router.call(newenv(x))
       end
@@ -216,6 +219,7 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   ### Rack::Multiplexer
   if flag_multiplex
     target_urlpaths.each do |x|
+      mpx_app.call(newenv(x))                # warm up
       bm.task("(Multiplexer) #{x}") do
         tuple = mpx_app.call(newenv(x))
       end
@@ -226,6 +230,7 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   ### Sinatra
   if flag_sinatra
     target_urlpaths.each do |x|
+      sina_app.call(newenv(x))               # warm up
       bm.task("(Sinatra)     #{x}") do
         tuple = sina_app.call(newenv(x))
       end
@@ -236,6 +241,7 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   ### Keight
   if flag_keight
     target_urlpaths.each do |x|
+      k8_app.call(newenv(x))                 # warm up
       bm.task("(Keight.rb)   #{x}") do
         tuple = k8_app.call(newenv(x))
       end
