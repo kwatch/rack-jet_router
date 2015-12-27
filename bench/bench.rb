@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 
-['rack', 'rack/jet_router', 'rack/multiplexer', 'sinatra/base', 'keight'].each do |x|
-  begin
-    require x
-  rescue LoadError
-  end
-end
+require 'rack'              rescue nil  unless $rack == '0'
+require 'rack/jet_router'   rescue nil  unless $jet  == '0'
+require 'rack/multiplexer'  rescue nil  unless $mpx  == '0'
+require 'sinatra/base'      rescue nil  unless $sina == '0'
+require 'keight'            rescue nil  unless $k8   == '0'
 
 flag_rack = flag_sinatra = flag_multiplexer = flag_keight = false
-flag_rack        = defined?(Rack)
+flag_rack        = defined?(Rack) && $rack != '0'
 flag_jetrouter   = defined?(Rack::JetRouter)
 flag_multiplex   = defined?(Rack::Multiplexer)
 flag_sinatra     = defined?(Sinatra)
 flag_keight      = defined?(K8)
+
+
+ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
 
 
 if flag_rack
@@ -57,14 +59,22 @@ if flag_jetrouter
     end
   end
 
-  jet_router = Rack::JetRouter.new([
-      ['/api', [
-          ['/hello', [
-              ['',        JetHelloApp1.new],
-              ['/:id',    JetHelloApp2.new],
-          ]],
-      ]],
-  ], urlpath_cache_size: 0)
+  jet_router = proc {
+    mapping = [
+      ['/api', ENTRIES.map {|x|
+                 ["/#{x}", [
+                   ['',        JetHelloApp1.new],
+                   ['/:id',    JetHelloApp2.new],
+                 ]]
+               },
+      ],
+    ]
+    opts = {
+      urlpath_cache_size:           ($k8cache || 0).to_i,
+      enable_urlpath_param_range:   $k8range != '0',
+    }
+    Rack::JetRouter.new(mapping, opts)
+  }.call()
 
 end
 
@@ -85,8 +95,10 @@ if flag_multiplex
   end
 
   mpx_app = Rack::Multiplexer.new()
-  mpx_app.get "/api/hello"     , MpxHelloApp1.new
-  mpx_app.get "/api/hello/:id" , MpxHelloApp2.new
+  ENTRIES.each do |x|
+    mpx_app.get "/api/#{x}"     , MpxHelloApp1.new
+    mpx_app.get "/api/#{x}/:id" , MpxHelloApp2.new
+  end
 
 end
 
@@ -99,8 +111,10 @@ if flag_sinatra
     set :protection , false
     set :x_cascade  , false
     #
-    get "/api/hello"     do "<h1>index</h1>" end
-    get "/api/hello/:id" do "<h1>id=#{params['id']}</h1>" end
+    ENTRIES.each do |x|
+      get "/api/#{x}"     do "<h1>index</h1>" end
+      get "/api/#{x}/:id" do "<h1>id=#{params['id']}</h1>" end
+    end
   end
 
   sina_app = SinaApp.new
@@ -118,9 +132,10 @@ if flag_keight
   end
 
   k8_app = K8::RackApplication.new([
-      ['/api', [
-          ['/hello',  K8HelloAction],
-      ]],
+      ['/api', ENTRIES.map {|x|
+                 ["/#{x}",  K8HelloAction]
+               }
+      ],
   ], urlpath_cache_size: 0)
 
   #k8_app.find('/api/books')     # warm up
@@ -145,29 +160,47 @@ end
 
 require './benchmarker'
 
-N = 100000
+N = ($N || 100000).to_i
 Benchmarker.new(:width=>33, :loop=>N) do |bm|
 
   #flag_sinatra   = false   # because too slow
-  target_urlpaths = ["/api/hello", "/api/hello/123"]
+  target_urlpaths = [
+    "/api/aaa01",
+    "/api/aaa01/123",
+    "/api/zzz26",
+    "/api/zzz26/789",
+  ]
   tuple = nil
+
+  puts ""
+  puts "** rack            : #{Rack.release}"               if flag_rack
+  puts "** rack-jet_router : #{Rack::JetRouter::RELEASE rescue '-'}"   if flag_jetrouter
+  puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION}" if flag_multiplex
+  puts "** sinatra         : #{Sinatra::VERSION}"           if flag_sinatra
+  puts "** keight          : #{K8::RELEASE rescue '-'}"  if flag_keight
+  puts ""
+  puts "** N=#{N}"
 
   ### empty task
   bm.empty_task do
-    newenv("/api/hello")
+    newenv("/api")
   end
 
 
   ### Rack
   if flag_rack
-    bm.task("(Rack plain)  /api/hello") do
-      tuple = rack_app1.call(newenv("/api/hello"))
+    target_urlpaths.each do |x|
+      bm.task("(Rack plain)  #{x}") do       # no routing
+        tuple = rack_app1.call(newenv(x))
+      end
+      _chk(tuple)
     end
-    _chk(tuple)
-    bm.task("(R::Req+Res)  /api/hello") do
-      tuple = rack_app4.call(newenv("/api/hello"))
+    target_urlpaths.each do |x|
+      bm.task("(R::Req+Res)  #{x}") do       # no routing
+        tuple = rack_app4.call(newenv(x))
+      end
+      _chk(tuple)
     end
-    _chk(tuple)
   end
 
   ### Rack::JetRouter
