@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ###
-### $Release: 0.0.0 $
+### $Release: 1.1.0 $
 ### $Copyright: copyright(c) 2015 kuwata-lab.com all rights reserved $
 ### $License: MIT License $
 ###
@@ -55,7 +55,7 @@ module Rack
   ##
   class JetRouter
 
-    RELEASE = '$Release: 0.0.0 $'.split()[1]
+    RELEASE = '$Release: 1.1.0 $'.split()[1]
 
     def initialize(mapping, urlpath_cache_size: 0,
                             enable_urlpath_param_range: true)
