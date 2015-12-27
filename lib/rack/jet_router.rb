@@ -30,7 +30,7 @@ module Rack
   ##       ]],
   ##   ]
   ##   router = Rack::JetRouter.new(urlpath_mapping)
-  ##   router.find('/api/books/123.html')
+  ##   router.lookup('/api/books/123.html')
   ##       #=> [book_api, {"id"=>"123", "format"=>"html"}]
   ##   status, headers, body = router.call(env)
   ##
@@ -49,7 +49,7 @@ module Rack
   ##       ]],
   ##   ]
   ##   router = Rack::JetRouter.new(urlpath_mapping)
-  ##   router.find('/api/books/123')
+  ##   router.lookup('/api/books/123')
   ##       #=> [{"GET"=>book_show_api, "PUT"=>book_update_api}, {"id"=>"123", "format"=>nil}]
   ##   status, headers, body = router.call(env)
   ##
@@ -74,12 +74,12 @@ module Rack
     def call(env)
       #; [!fpw8x] finds mapped app according to env['PATH_INFO'].
       req_path = env['PATH_INFO']
-      app, urlpath_params = find(req_path)
+      app, urlpath_params = lookup(req_path)
       #; [!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found.
       #; [!3vsua] doesn't redict automatically when request path is '/'.
       unless app || req_path == '/'
         location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
-        app, urlpath_params = find(location)
+        app, urlpath_params = lookup(location)
         return redirect_to(location) if app
       end
       #; [!30x0k] returns 404 when request urlpath not found.
@@ -104,8 +104,8 @@ module Rack
     ## Finds app or Hash mapped to request path.
     ##
     ## ex:
-    ##    find('/api/books/123')   #=> [BookApp, {"id"=>"123"}]
-    def find(req_path)
+    ##    lookup('/api/books/123')   #=> [BookApp, {"id"=>"123"}]
+    def lookup(req_path)
       #; [!24khb] finds in fixed urlpaths at first.
       #; [!iwyzd] urlpath param value is nil when found in fixed urlpaths.
       obj = @fixed_urlpath_dict[req_path]
@@ -140,6 +140,8 @@ module Rack
       end
       return obj, vars
     end
+
+    alias find lookup      # :nodoc:      # for backward compatilibity
 
     protected
 

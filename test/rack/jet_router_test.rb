@@ -454,30 +454,30 @@ describe Rack::JetRouter do
   end
 
 
-  describe '#find()' do
+  describe '#lookup()' do
 
     it "[!ijqws] returns mapped object and urlpath parameter values when urlpath found." do
-      ret = jet_router.find('/api/books/123')
+      ret = jet_router.lookup('/api/books/123')
       ok {ret} == [book_show_api, {"id"=>"123"}]
     end
 
     it "[!vpdzn] returns nil when urlpath not found." do
-      ok {jet_router.find('/api')}        == nil
-      ok {jet_router.find('/api/book')}   == nil
-      ok {jet_router.find('/api/books/')} == nil
+      ok {jet_router.lookup('/api')}        == nil
+      ok {jet_router.lookup('/api/book')}   == nil
+      ok {jet_router.lookup('/api/books/')} == nil
     end
 
     it "[!24khb] finds in fixed urlpaths at first." do
-      ok {jet_router.find('/')}            == [welcome_app, nil]
-      ok {jet_router.find('/api/books')}   == [book_list_api, nil]
+      ok {jet_router.lookup('/')}            == [welcome_app, nil]
+      ok {jet_router.lookup('/api/books')}   == [book_list_api, nil]
       dict = {'GET'=>admin_book_list_app, 'POST'=>admin_book_create_app}
-      ok {jet_router.find('/admin/books')} == [dict, nil]
+      ok {jet_router.lookup('/admin/books')} == [dict, nil]
     end
 
     it "[!iwyzd] urlpath param value is nil when found in fixed urlpaths." do
-      obj, vars = jet_router.find('/')
+      obj, vars = jet_router.lookup('/')
       ok {vars} == nil
-      obj, vars = jet_router.find('/api/books')
+      obj, vars = jet_router.lookup('/api/books')
       ok {vars} == nil
     end
 
@@ -486,14 +486,14 @@ describe Rack::JetRouter do
         ['/api/books/:id', book_show_api],
       ]
       r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
-      pair = r.find('/api/books/123')
+      pair = r.lookup('/api/books/123')
       ok {pair} == [book_show_api, {"id"=>"123"}]
       r.instance_exec(self) do |_|
         _.ok {@variable_urlpath_cache} == {'/api/books/123'=>pair}
         #
         @variable_urlpath_cache['/api/books/999'] = [book_list_api, {"ID"=>"111"}]
       end
-      pair = r.find('/api/books/999')
+      pair = r.lookup('/api/books/999')
       ok {pair} == [book_list_api, {"ID"=>"111"}]
     end
 
@@ -503,9 +503,9 @@ describe Rack::JetRouter do
       ]
       r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
       #
-      pair1 = r.find('/books/1'); ok {pair1} == [book_show_api, {"id"=>"1"}]
-      pair2 = r.find('/books/2'); ok {pair2} == [book_show_api, {"id"=>"2"}]
-      pair3 = r.find('/books/3'); ok {pair3} == [book_show_api, {"id"=>"3"}]
+      pair1 = r.lookup('/books/1'); ok {pair1} == [book_show_api, {"id"=>"1"}]
+      pair2 = r.lookup('/books/2'); ok {pair2} == [book_show_api, {"id"=>"2"}]
+      pair3 = r.lookup('/books/3'); ok {pair3} == [book_show_api, {"id"=>"3"}]
       r.instance_exec(self) do |_|
         _.ok {@variable_urlpath_cache} == {
           '/books/1'=>pair1,
@@ -514,7 +514,7 @@ describe Rack::JetRouter do
         }
       end
       #
-      pair4 = r.find('/books/4'); ok {pair4} == [book_show_api, {"id"=>"4"}]
+      pair4 = r.lookup('/books/4'); ok {pair4} == [book_show_api, {"id"=>"4"}]
       r.instance_exec(self) do |_|
         _.ok {@variable_urlpath_cache} == {
           '/books/2'=>pair2,
@@ -530,10 +530,10 @@ describe Rack::JetRouter do
       ]
       r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
       #
-      pair1 = r.find('/books/1')
-      pair2 = r.find('/books/2')
-      pair3 = r.find('/books/3')
-      pair4 = r.find('/books/4')
+      pair1 = r.lookup('/books/1')
+      pair2 = r.lookup('/books/2')
+      pair3 = r.lookup('/books/3')
+      pair4 = r.lookup('/books/4')
       r.instance_exec(self) do |_|
         _.ok {@variable_urlpath_cache} == {
           '/books/2'=>pair2,
@@ -542,7 +542,7 @@ describe Rack::JetRouter do
         }
       end
       #
-      ok {r.find('/books/3')} == pair3
+      ok {r.lookup('/books/3')} == pair3
       r.instance_exec(self) do |_|
         _.ok {@variable_urlpath_cache} == {
           '/books/2'=>pair2,
@@ -551,7 +551,7 @@ describe Rack::JetRouter do
         }
       end
       #
-      ok {r.find('/books/1')} == pair1
+      ok {r.lookup('/books/1')} == pair1
       r.instance_exec(self) do |_|
         _.ok {@variable_urlpath_cache} == {
           '/books/4'=>pair4,
