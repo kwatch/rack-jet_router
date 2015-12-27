@@ -8,23 +8,46 @@ derived from [Keight.rb](https://github.com/kwatch/keight/tree/ruby).
 
 Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/dev/bench/bench.rb).
 
+### JetRouter vs. Rack vs. Sinatra vs. Keight.rb:
+
 ```
-## Ranking                        usec/req
-(Rack plain)  /api/hello             1.555 (100.0%) ********************
-(JetRouter)   /api/hello             1.597 ( 97.4%) *******************
-(JetRouter)   /api/hello/123         6.424 ( 24.2%) *****
-(R::Req+Res)  /api/hello             9.837 ( 15.8%) ***
-(Sinatra)     /api/hello           106.965 (  1.5%)
-(Sinatra)     /api/hello/123       116.672 (  1.3%)
+## Ranking                         usec/req  Graph (longer=faster)
+(Rack plain)  /api/aaa01             1.0619  ***************
+(Rack plain)  /api/aaa01/123         0.8729  ******************
+(R::Req+Res)  /api/aaa01             9.5361  **
+(R::Req+Res)  /api/aaa01/123         9.5321  **
+(JetRouter)   /api/aaa01             1.3231  ************
+(JetRouter)   /api/aaa01/123         5.9796  ***
+(Keight.rb)   /api/aaa01             6.4314  **
+(Keight.rb)   /api/aaa01/123        10.2339  **
+(Sinatra)     /api/aaa01           104.7575
+(Sinatra)     /api/aaa01/123       115.8220
 ```
 
 * If URL path has no path parameter (such as `/api/hello`),
-  Rack::JetRouter is just a litte slower than plain Rack application.
+  Rack::JetRouter is a litte shower than plain Rack application.
 * If URL path contains path parameter (such as `/api/hello/:id`),
-  Rack::JetRouter becomes slower, but it is enough small (about 6.4ns/req).
-* Overhead of Rack::JetRouter is smaller than that of Rack::Reqeust +
+  Rack::JetRouter becomes slower, but it is enough small (about 6usec/req).
+* Overhead of Rack::JetRouter is smaller than that of Rack::Reqeuast +
   Rack::Response.
 * Sinatra is too slow.
+
+
+### JetRouter vs. Rack::Multiplexer:
+
+```
+## Ranking                         usec/req  Graph (longer=faster)
+(JetRouter)   /api/aaa01             1.3231  ************
+(JetRouter)   /api/aaa01/123         5.9796  ***
+(JetRouter)   /api/zzz26             1.4089  ***********
+(JetRouter)   /api/zzz26/789         6.5142  **
+(Multiplexer) /api/aaa01             5.9073  ***
+(Multiplexer) /api/aaa01/123        18.2102  *
+(Multiplexer) /api/zzz26            24.4013  *
+(Multiplexer) /api/zzz26/789        36.1558
+```
+
+* JetRouter is about 3~5 times faster than Rack::Multiplexer.
 
 
 ## Examples
@@ -38,7 +61,7 @@ require 'rack'
 require 'rack/jet_router'
 
 ## Assume that welcome_app, books_api, ... are Rack application.
-urlpath_mapping = [
+mapping = [
     ['/'                       , welcome_app],
     ['/api', [
         ['/books', [
@@ -52,9 +75,9 @@ urlpath_mapping = [
     ]],
 ]
 
-router = Rack::JetRouter.new(urlpath_mapping)
-p router.lookup('/api/books/123.html')
-    #=> [book_api, {"id"=>"123", "format"=>"html"}]
+router = Rack::JetRouter.new(mapping)
+p router.lookup('/api/books/123.json')
+    #=> [book_api, {"id"=>"123", "format"=>"json"}]
 
 status, headers, body = router.call(env)
 ```
@@ -69,7 +92,7 @@ require 'rack'
 require 'rack/jet_router'
 
 ## Assume that welcome_app, book_list_api, ... are Rack application.
-urlpath_mapping = [
+mapping = [
     ['/'                       , {GET: welcome_app}],
     ['/api', [
         ['/books', [
@@ -83,7 +106,7 @@ urlpath_mapping = [
     ]],
 ]
 
-router = Rack::JetRouter.new(urlpath_mapping)
+router = Rack::JetRouter.new(mapping)
 p router.lookup('/api/books/123')
     #=> [{"GET"=>book_show_api, "PUT"=>book_update_api}, {"id"=>"123", "format"=>nil}]
 
@@ -118,7 +141,7 @@ class BooksAPI < API
   def delete(id: nil); ....; end
 end
 
-urlpath_mapping = [
+mapping = [
     ['/api', [
         ['/books', [
             [''      , {GET:    [BooksAPI, :index],
@@ -129,11 +152,10 @@ urlpath_mapping = [
         ]],
     ]],
 ]
-router = Rack::JetRouter.new(urlpath_mapping)
-p router.lookup('/api/books/123')
-    #=> [{"GET"=>[BooksAPI, :show], "PUT"=>..., "DELETE"=>...}, {"id"=>"123"}]
-
+router = Rack::JetRouter.new(mapping)
 dict, args = router.lookup('/api/books/123')
+p dict   #=> {"GET"=>[BooksAPI, :show], "PUT"=>[...], "DELETE"=>[...]}
+p args   #=> {"id"=>"123"}
 klass, action = dict["GET"]
 handler = klass.new(Rack::Request.new(env), Rack::Response.new)
 handler.__send__(action, args)
@@ -145,8 +167,8 @@ handler.__send__(action, args)
 
 ### URL Path Parameters
 
-URL path parameters (such as `{"id"=>"123"}`) is available via
-`env['rack.urlpath_params']`.
+In Rack application, URL path parameters (such as `{"id"=>"123"}`) are
+available via `env['rack.urlpath_params']`.
 
 ```ruby
 BookApp = proc {|env|
@@ -175,7 +197,7 @@ end
 
 ### Variable URL Path Cache
 
-It is possible to classify URL path patterns into two types: fixed and variable.
+It is useful to classify URL path patterns into two types: fixed and variable.
 
 * **Fixed URL path pattern** doesn't contain any urlpath paramters.<br>
   Example: `/`, `/login`, `/api/books`
