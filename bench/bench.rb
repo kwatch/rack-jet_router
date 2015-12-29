@@ -177,7 +177,7 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   puts "** rack-jet_router : #{Rack::JetRouter::RELEASE rescue '-'}"   if flag_jetrouter
   puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION}" if flag_multiplex
   puts "** sinatra         : #{Sinatra::VERSION}"           if flag_sinatra
-  puts "** keight          : #{K8::RELEASE rescue '-'}"  if flag_keight
+  puts "** keight          : #{K8::RELEASE rescue '-'}"     if flag_keight
   puts ""
   puts "** N=#{N}"
 
