@@ -257,6 +257,12 @@ $License: MIT License $
 ## History
 
 
+### 2015-12-29: Release 1.1.1
+
+* Fix benchmark script.
+* Fix document.
+
+
 ### 2015-12-28: Release 1.1.0
 
 * **NOTICE** `Rack::JetRouter#find()` is renamed to `#lookup()`.<br>
