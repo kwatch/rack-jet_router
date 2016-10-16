@@ -623,6 +623,13 @@ describe Rack::JetRouter do
       ok {r.call(new_env(:GET, '/'))} == [404, {"Content-Type"=>"text/plain"}, ["404 Not Found"]]
     end
 
+    it "[!hyk62] adds QUERY_STRING to redirect location." do
+      headers = {"Content-Type"=>"text/plain", "Location"=>"/api/books?x=1&y=2"}
+      content = "Redirect to /api/books?x=1&y=2"
+      env = new_env(:GET, '/api/books/', {"QUERY_STRING"=>"x=1&y=2"})
+      ok {jet_router.call(env)} == [301, headers, [content]]
+    end
+
     it "[!30x0k] returns 404 when request urlpath not found." do
       expected = [404, {"Content-Type"=>"text/plain"}, ["404 Not Found"]]
       ok {jet_router.call(new_env(:GET, '/xxx'))} == expected

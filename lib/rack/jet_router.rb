@@ -80,7 +80,12 @@ module Rack
       if ! app && should_redirect?(env)
         location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
         app, urlpath_params = lookup(location)
-        return redirect_to(location) if app
+        if app
+          #; [!hyk62] adds QUERY_STRING to redirect location.
+          qs = env['QUERY_STRING']
+          location = "#{location}?#{qs}" if qs && ! qs.empty?
+          return redirect_to(location)
+        end
       end
       #; [!30x0k] returns 404 when request urlpath not found.
       return error_not_found(env) unless app
