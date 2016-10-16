@@ -77,7 +77,7 @@ module Rack
       app, urlpath_params = lookup(req_path)
       #; [!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found.
       #; [!3vsua] doesn't redict automatically when request path is '/'.
-      unless app || req_path == '/'
+      if ! app && should_redirect?(env)
         location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
         app, urlpath_params = lookup(location)
         return redirect_to(location) if app
@@ -155,6 +155,18 @@ module Rack
     def error_not_allowed(env)
       #; [!mjigf] returns 405 response.
       return [405, {"Content-Type"=>"text/plain"}, ["405 Method Not Allowed"]]
+    end
+
+    ## Returns false when request path is '/' or request method is not GET nor HEAD.
+    ## (It is not recommended to redirect when request method is POST, PUT or DELETE,
+    ##  because browser doesn't handle redirect correctly on those methods.)
+    def should_redirect?(env)
+      #; [!dsu34] returns false when request path is '/'.
+      #; [!ycpqj] returns true when request method is GET or HEAD.
+      #; [!7q8xu] returns false when request method is POST, PUT or DELETE.
+      return false if env['PATH_INFO'] == '/'
+      req_method = env['REQUEST_METHOD']
+      return req_method == 'GET' || req_method == 'HEAD'
     end
 
     ## Returns [301, {"Location"=>location, ...}, [...]]. Override in subclass if necessary.

@@ -379,6 +379,38 @@ describe Rack::JetRouter do
   end
 
 
+  describe '#should_redirect?' do
+
+    it "[!dsu34] returns false when request path is '/'." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {should_redirect?(_.new_env('GET'   , '/'))} == false
+        _.ok {should_redirect?(_.new_env('POST'  , '/'))} == false
+        _.ok {should_redirect?(_.new_env('PUT'   , '/'))} == false
+        _.ok {should_redirect?(_.new_env('DELETE', '/'))} == false
+        _.ok {should_redirect?(_.new_env('HEAD'  , '/'))} == false
+        _.ok {should_redirect?(_.new_env('PATCH' , '/'))} == false
+      end
+    end
+
+    it "[!ycpqj] returns true when request method is GET or HEAD." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {should_redirect?(_.new_env('GET'   , '/index'))} == true
+        _.ok {should_redirect?(_.new_env('HEAD'  , '/index'))} == true
+      end
+    end
+
+    it "[!7q8xu] returns false when request method is POST, PUT or DELETE." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {should_redirect?(_.new_env('POST'  , '/index'))} == false
+        _.ok {should_redirect?(_.new_env('PUT'   , '/index'))} == false
+        _.ok {should_redirect?(_.new_env('DELETE', '/index'))} == false
+        _.ok {should_redirect?(_.new_env('PATCH' , '/index'))} == false
+      end
+    end
+
+  end
+
+
   describe '#error_not_found()' do
 
     it "[!mlruv] returns 404 response." do
