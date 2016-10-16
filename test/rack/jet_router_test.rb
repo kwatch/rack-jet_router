@@ -688,6 +688,28 @@ describe Rack::JetRouter do
   end
 
 
+  describe '#each()' do
+
+    it "[!ep0pw] yields pair of urlpath pattern and app." do
+      arr = []
+      jet_router.each do |upath, app|
+        arr << [upath, app]
+      end
+      ok {arr[0]} == ["/", welcome_app]
+      ok {arr[1]} == ["/index.html", welcome_app]
+      ok {arr[2]} == ["/api/books", book_list_api]
+      ok {arr[3]} == ["/api/books/new", book_new_api]
+      ok {arr[4]} == ["/api/books/:id", book_show_api]
+      ok {arr[5]} == ["/api/books/:id/edit", book_edit_api]
+      ok {arr[6]} == ["/api/books/:book_id/comments", comment_create_api]
+      ok {arr[7]} == ["/api/books/:book_id/comments/:comment_id", comment_update_api]
+      ok {arr[8]} == ["/admin/books", {"GET"=>admin_book_list_app, "POST"=>admin_book_create_app}]
+      ok {arr[9]} == ["/admin/books/:id", {"GET"=>admin_book_show_app, "PUT"=>admin_book_update_app, "DELETE"=>admin_book_delete_app}]
+    end
+
+  end
+
+
   describe 'REQUEST_METHODS' do
 
     it "[!haggu] contains available request methods." do

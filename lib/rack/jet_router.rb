@@ -64,6 +64,7 @@ module Rack
       (@urlpath_rexp,          # ex: {'/api/books'=>BooksApp}
        @fixed_urlpath_dict,    # ex: [[%r'\A/api/books/([^./]+)\z', ['id'], BookApp]]
        @variable_urlpath_list, # ex: %r'\A(?:/api(?:/books(?:/[^./]+(\z))))\z'
+       @all_entrypoints,       # ex: [['/api/books', BooksAPI'], ['/api/orders', OrdersAPI]]
       ) = compile_mapping(mapping)
       ## cache for variable urlpath (= containg urlpath parameters)
       @urlpath_cache_size = urlpath_cache_size
@@ -150,6 +151,12 @@ module Rack
 
     alias find lookup      # :nodoc:      # for backward compatilibity
 
+    ## Yields pair of urlpath pattern and app.
+    def each(&block)
+      #; [!ep0pw] yields pair of urlpath pattern and app.
+      @all_entrypoints.each(&block)
+    end
+
     protected
 
     ## Returns [404, {...}, [...]]. Override in subclass if necessary.
@@ -222,8 +229,10 @@ module Rack
       ##   ]
       list = []
       #
+      all = []
       rexp_str = _compile_mapping(mapping, "", "") do |entry_point|
         obj, urlpath_pat, urlpath_rexp, param_names = entry_point
+        all << [urlpath_pat, obj]
         if urlpath_rexp
           range = @enable_urlpath_param_range ? range_of_urlpath_param(urlpath_pat) : nil
           list << [urlpath_rexp, param_names, obj, range]
@@ -234,7 +243,7 @@ module Rack
       ## ex: %r!^A(?:api(?:/books/[^./]+(\z)|/authors/[^./]+(\z)))\z!
       urlpath_rexp = Regexp.new("\\A#{rexp_str}\\z")
       #; [!xzo7k] returns regexp, hash, and array.
-      return urlpath_rexp, dict, list
+      return urlpath_rexp, dict, list, all
     end
 
     def _compile_mapping(mapping, base_urlpath, parent_urlpath, &block)
