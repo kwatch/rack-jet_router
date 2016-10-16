@@ -1,6 +1,6 @@
 # Rack::JetRouter
 
-($Release: 0.0.0 $)
+($Release: 1.2.0 $)
 
 Rack::JetRouter is crazy-fast router library for Rack application,
 derived from [Keight.rb](https://github.com/kwatch/keight/tree/ruby).
