@@ -199,6 +199,18 @@ end
 ```
 
 
+### Auto-redirection.
+
+Rack::JetRouter implements auto-redirection.
+
+* When `/foo` is provided and `/foo/` is requested, then Rack::JetRouter redirects to `/foo` automatically.
+* When `/foo/` is provided and `/foo` is requested, then Rack::JetRouter redirects to `/foo/` automatically.
+
+Notice that auto-redirection is occurred only on `GET` or `HEAD` methods, because
+browser cannot handle redirection on `POST`, `PUT`, and `DELETE` methods correctly.
+Don't depend on auto-redirection feature so much.
+
+
 ### Variable URL Path Cache
 
 It is useful to classify URL path patterns into two types: fixed and variable.
@@ -249,12 +261,19 @@ Above methods are invoked from `Rack::JetRouter#call()`.
 
 ## Copyright and License
 
-$Copyright: copyright(c) 2015 kuwata-lab.com all rights reserved $
+$Copyright: copyright(c) 2015-2016 kuwata-lab.com all rights reserved $
 
 $License: MIT License $
 
 
 ## History
+
+
+### 2016-10-16: Release 1.2.0
+
+* Change auto-redirection to be occurred only on GET or HEAD methods.
+* Code is rewrited, especially around `Rack::JetRouter#compile_mapping()`.
+* Update benchmark script to support `Hanabi::Router`.
 
 
 ### 2015-12-29: Release 1.1.1
