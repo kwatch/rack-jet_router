@@ -114,7 +114,7 @@ if flag_sinatra
     set :x_cascade  , false
     #
     ENTRIES.each do |x|
-      get "/api/#{x}"     do "<h1>index</h1>" end
+      get "/api/#{x}"     do "<h1>hello</h1>" end
       get "/api/#{x}/:id" do "<h1>id=#{params['id']}</h1>" end
     end
   end
@@ -129,7 +129,7 @@ if flag_keight
   class K8HelloAction < K8::Action
     mapping '',       :GET=>:do_index
     mapping '/{id}',  :GET=>:do_show
-    def do_index        ; "<h1>index</h1>"; end
+    def do_index        ; "<h1>hello</h1>"; end
     def do_show(id)     ; "<h1>id=#{id.inspect}</h1>"; end
   end
 
@@ -168,6 +168,9 @@ end
 
 def _chk(tuple)
   tuple[0] == 200  or raise "200 expected but got #{tuple[0]}"
+  body = tuple[2].each {|x| break x }
+  body == "<h1>hello</h1>" || body == "<h1>id=123</h1>" || body == "<h1>id=789</h1>"  or
+    raise "#{body.inspect}: unpexpected body"
   GC.start
 end
 
