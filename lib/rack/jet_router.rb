@@ -205,73 +205,71 @@ module Rack
 
     ## Compiles urlpath mapping. Called from '#initialize()'.
     def compile_mapping(mapping)
-      rexp_buf          = ['\A']
-      fixed_urlpaths    = {}  # ex: {'/api/books'=>BooksApp}
-      variable_urlpaths = []  # ex: [[%r'\A/api/books/([^./]+)\z', ['id'], BookApp]]
-      _compile_array(mapping, rexp_buf, '', '',
-                      fixed_urlpaths, variable_urlpaths)
-      ## ex: %r'\A(?:/api(?:/books(?:/[^./]+(\z)|/[^./]+/edit(\z))))\z'
-      rexp_buf << '\z'
-      urlpath_rexp = Regexp.new(rexp_buf.join())
-      #; [!xzo7k] returns regexp, hash, and array.
-      return urlpath_rexp, fixed_urlpaths, variable_urlpaths
-    end
-
-    def _compile_array(mapping, rexp_buf, base_urlpath_pat, urlpath_pat,
-                       fixed_dict, variable_list)
-      rexp_str, _ = compile_urlpath_pattern(urlpath_pat, false)
-      rexp_buf << rexp_str
-      rexp_buf << '(?:'
-      len = rexp_buf.length
-      mapping.each do |child_urlpath_pat, obj|
-        rexp_buf << '|' if rexp_buf.length != len
-        curr_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}"
-        #; [!ospaf] accepts nested mapping.
-        if obj.is_a?(Array)
-          _compile_array(obj, rexp_buf, curr_urlpath_pat, child_urlpath_pat,
-                         fixed_dict, variable_list)
-        #; [!2ktpf] handles end-point.
+      ## entry points which has no urlpath parameters
+      ## ex:
+      ##   { '/'           => HomeApp,
+      ##     '/api/books'  => BooksApp,
+      ##     '/api/authors => AuthorsApp,
+      ##   }
+      dict = {}
+      ## entry points which has one or more urlpath parameters
+      ## ex:
+      ##   [
+      ##     [%r!\A/api/books/([^./]+)\z!,   ["id"], BookApp,   (11..-1)],
+      ##     [%r!\A/api/authors/([^./]+)\z!, ["id"], AuthorApp, (12..-1)],
+      ##   ]
+      list = []
+      #
+      rexp_str = _compile_mapping(mapping, "", "") do |entry_point|
+        obj, urlpath_pat, urlpath_rexp, param_names = entry_point
+        if urlpath_rexp
+          range = @enable_urlpath_param_range ? range_of_urlpath_param(urlpath_pat) : nil
+          list << [urlpath_rexp, param_names, obj, range]
         else
-          _compile_object(obj, rexp_buf, curr_urlpath_pat, child_urlpath_pat,
-                          fixed_dict, variable_list)
+          dict[urlpath_pat] = obj
         end
       end
-      #; [!gfxgr] deletes unnecessary grouping.
-      if rexp_buf.length == len
-        x = rexp_buf.pop()    # delete '(?:'
-        x == '(?:'  or raise "assertion failed"
-        #; [!pv2au] deletes unnecessary urlpath regexp.
-        x = rexp_buf.pop()    # delete rexp_str
-        x == rexp_str  or raise "assertion failed"
-      #; [!bh9lo] deletes unnecessary grouping which contains only an element.
-      elsif rexp_buf.length == len + 1
-        rexp_buf[-2] == '(?:'  or raise "assertion failed: rexp_buf[-2]=#{rexp_buf[-2].inspect}"
-        rexp_buf[-2] = ''
-      else
-        rexp_buf << ')'
-      end
+      ## ex: %r!^A(?:api(?:/books/[^./]+(\z)|/authors/[^./]+(\z)))\z!
+      urlpath_rexp = Regexp.new("\\A#{rexp_str}\\z")
+      #; [!xzo7k] returns regexp, hash, and array.
+      return urlpath_rexp, dict, list
     end
 
-    def _compile_object(obj, rexp_buf, base_urlpath_pat, urlpath_pat,
-                        fixed_dict, variable_list)
-      #; [!guhdc] if mapping dict is specified...
-      if obj.is_a?(Hash)
-        obj = normalize_mapping_keys(obj)
+    def _compile_mapping(mapping, base_urlpath, parent_urlpath, &block)
+      arr = []
+      mapping.each do |urlpath, obj|
+        full_urlpath = "#{base_urlpath}#{urlpath}"
+        #; [!ospaf] accepts nested mapping.
+        if obj.is_a?(Array)
+          rexp_str = _compile_mapping(obj, full_urlpath, urlpath, &block)
+        #; [!2ktpf] handles end-point.
+        else
+          #; [!guhdc] if mapping dict is specified...
+          if obj.is_a?(Hash)
+            obj = normalize_mapping_keys(obj)
+          end
+          #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
+          full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath, true)
+          if param_names   # has urlpath params
+            full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
+            rexp_str, _ = compile_urlpath_pattern(urlpath, false)
+            rexp_str << '(\z)'
+            entry_point = [obj, full_urlpath, full_urlpath_rexp, param_names]
+          #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+          else             # has no urlpath params
+            entry_point = [obj, full_urlpath, nil, nil]
+          end
+          yield entry_point
+        end
+        arr << rexp_str if rexp_str
       end
-      #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-      full_urlpath_pat = "#{base_urlpath_pat}#{urlpath_pat}"
-      full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath_pat, true)
-      fixed_pattern = param_names.nil?
-      if fixed_pattern
-        fixed_dict[full_urlpath_pat] = obj
-      #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
-      else
-        rexp_str, _ = compile_urlpath_pattern(urlpath_pat, false)
-        rexp_buf << (rexp_str << '(\z)')
-        full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
-        range = @enable_urlpath_param_range ? range_of_urlpath_param(full_urlpath_pat) : nil
-        variable_list << [full_urlpath_rexp, param_names, obj, range]
-      end
+      #; [!pv2au] deletes unnecessary urlpath regexp.
+      return nil if arr.empty?
+      #; [!bh9lo] deletes unnecessary grouping.
+      parent_urlpath_rexp_str, _ = compile_urlpath_pattern(parent_urlpath, false)
+      return "#{parent_urlpath_rexp_str}#{arr[0]}" if arr.length == 1
+      #; [!iza1g] adds grouping if necessary.
+      return "#{parent_urlpath_rexp_str}(?:#{arr.join('|')})"
     end
 
     ## Compiles '/books/:id' into ['/books/([^./]+)', ["id"]].

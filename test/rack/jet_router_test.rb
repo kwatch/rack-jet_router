@@ -154,23 +154,39 @@ describe Rack::JetRouter do
       end
     end
 
-    it "[!gfxgr] deletes unnecessary grouping." do
+    it "[!iza1g] adds grouping if necessary." do
       mapping = [
-        ['/'               , welcome_app],
-        ['/api/books'      , book_list_api],
+        ['/api', [
+          ['/books', [
+            ['/:id'        , book_show_api],
+          ]],
+        ]],
+        ['/admin', [
+          ['/books', [
+            ['/:id'        , admin_book_show_app],
+          ]],
+        ]],
       ]
       expected = '
           \A
+              (?:
+              /api
+                      /books
+                          /[^./]+(\z)
+              |
+              /admin
+                      /books
+                          /[^./]+(\z)
+              )
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
         rexp, dict, list = compile_mapping(mapping)
         _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {
-          '/'                => welcome_app,
-          '/api/books'       => book_list_api,
-        }
+        _.ok {dict} == {}
         _.ok {list} == [
+          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
+          [%r'\A/admin/books/([^./]+)\z',  ['id'], admin_book_show_app, (13..-1)],
         ]
       end
     end
@@ -188,17 +204,7 @@ describe Rack::JetRouter do
           ]],
         ]],
       ]
-      expected = '
-          \A
-          (?:
-              /api
-                  (?:
-                      /books2
-                          /[^./]+(\z)
-                  )
-          )
-          \z
-      '.gsub(/\s+/, '')
+      expected = '\A/api/books2/[^./]+(\z)\z'
       jet_router.instance_exec(self) do |_|
         rexp, dict, list = compile_mapping(mapping)
         _.ok {rexp} == Regexp.new(expected)
@@ -213,7 +219,7 @@ describe Rack::JetRouter do
       end
     end
 
-    it "[!bh9lo] deletes unnecessary grouping which contains only an element." do
+    it "[!bh9lo] deletes unnecessary grouping." do
       mapping = [
         ['/api', [
           ['/books', [
@@ -223,13 +229,9 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
-              /api
-                  (?:
-                      /books
-                          /[^./]+(\z)
-                  )
-          )
+            /api
+              /books
+                /[^./]+(\z)
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -318,16 +320,10 @@ describe Rack::JetRouter do
       ]
       expected = '
           \A
-          (?:
               /admin
-                  (?:
-                      /api
-                          (?:
-                              /books
-                                  /[^./]+(\z)
-                          )
-                  )
-          )
+                  /api
+                      /books
+                          /[^./]+(\z)
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -454,9 +450,8 @@ describe Rack::JetRouter do
                     )
             |
                 /admin
-                    (?:/books
+                    /books
                         /[^./]+(\z)
-                    )
             )
             \z
         '.gsub(/\s+/, '')
