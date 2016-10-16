@@ -70,6 +70,8 @@ module Rack
       @variable_urlpath_cache = urlpath_cache_size > 0 ? {} : nil
     end
 
+    attr_reader :urlpath_rexp
+
     ## Finds rack app according to PATH_INFO and REQUEST_METHOD and invokes it.
     def call(env)
       #; [!fpw8x] finds mapped app according to env['PATH_INFO'].
