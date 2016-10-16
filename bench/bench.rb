@@ -5,13 +5,15 @@ require 'rack/jet_router'   rescue nil  unless $jet  == '0'
 require 'rack/multiplexer'  rescue nil  unless $mpx  == '0'
 require 'sinatra/base'      rescue nil  unless $sina == '0'
 require 'keight'            rescue nil  unless $k8   == '0'
+require 'hanami'            rescue nil  unless $hanami == '0'
 
-flag_rack = flag_sinatra = flag_multiplexer = flag_keight = false
+flag_rack = flag_sinatra = flag_multiplexer = flag_keight = flag_hanami = false
 flag_rack        = defined?(Rack) && $rack != '0'
 flag_jetrouter   = defined?(Rack::JetRouter)
 flag_multiplex   = defined?(Rack::Multiplexer)
 flag_sinatra     = defined?(Sinatra)
 flag_keight      = defined?(K8)
+flag_hanami      = defined?(Hanami::Router)
 
 
 ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
@@ -143,6 +145,27 @@ if flag_keight
 end
 
 
+if flag_hanami
+
+  hanami_index = proc do |env|
+    [200, {"Content-Type": "text/html"}, ["<h1>hello</h1>"]]
+  end
+  hanami_show = proc do |env|
+    params = env['router.params']
+    [200, {"Content-Type": "text/html"}, ["<h1>id=#{params[:id]}</h1>"]]
+  end
+
+  hanami_router = Hanami::Router.new
+  hanami_router.namespace '/api' do |api|
+    ENTRIES.each do |x|
+      api.get    "/#{x}"    , to: hanami_index
+      api.get    "/#{x}/:id", to: hanami_show
+    end
+  end
+
+end
+
+
 def _chk(tuple)
   tuple[0] == 200  or raise "200 expected but got #{tuple[0]}"
   GC.start
@@ -178,6 +201,7 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION}" if flag_multiplex
   puts "** sinatra         : #{Sinatra::VERSION}"           if flag_sinatra
   puts "** keight          : #{K8::RELEASE rescue '-'}"     if flag_keight
+  puts "** hanami          : #{Hanami::VERSION rescue '-'}" if flag_hanami
   puts ""
   puts "** N=#{N}"
 
@@ -244,6 +268,16 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
       k8_app.call(newenv(x))                 # warm up
       bm.task("(Keight.rb)   #{x}") do
         tuple = k8_app.call(newenv(x))
+      end
+      _chk(tuple)
+    end
+  end
+
+  if flag_hanami
+    target_urlpaths.each do |x|
+      hanami_router.call(newenv(x))          # warm up
+      bm.task("(Hanami::Router) #{x}") do
+        tuple = hanami_router.call(newenv(x))
       end
       _chk(tuple)
     end
