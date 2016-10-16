@@ -237,12 +237,10 @@ module Rack
 
     def _compile_mapping(mapping, base_urlpath, parent_urlpath, &block)
       arr = []
-      has_children = false
       mapping.each do |urlpath, obj|
         full_urlpath = "#{base_urlpath}#{urlpath}"
         #; [!ospaf] accepts nested mapping.
         if obj.is_a?(Array)
-          has_children = true
           rexp_str = _compile_mapping(obj, full_urlpath, urlpath, &block)
         #; [!2ktpf] handles end-point.
         else
@@ -267,11 +265,10 @@ module Rack
       end
       #; [!pv2au] deletes unnecessary urlpath regexp.
       return nil if arr.empty?
-      #; [!gfxgr] deletes unnecessary grouping.
-      #; [!bh9lo] deletes unnecessary grouping which contains only an element.
+      #; [!bh9lo] deletes unnecessary grouping.
       parent_urlpath_rexp_str, _ = compile_urlpath_pattern(parent_urlpath, false)
-      #return "#{parent_urlpath_rexp_str}#{arr[0]}" if arr.length == 1
-      return "#{parent_urlpath_rexp_str}#{arr[0]}" if arr.length == 1 && ! has_children
+      return "#{parent_urlpath_rexp_str}#{arr[0]}" if arr.length == 1
+      #; [!iza1g] adds grouping if necessary.
       return "#{parent_urlpath_rexp_str}(?:#{arr.join('|')})"
     end
 
