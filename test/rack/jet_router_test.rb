@@ -379,6 +379,38 @@ describe Rack::JetRouter do
   end
 
 
+  describe '#should_redirect?' do
+
+    it "[!dsu34] returns false when request path is '/'." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {should_redirect?(_.new_env('GET'   , '/'))} == false
+        _.ok {should_redirect?(_.new_env('POST'  , '/'))} == false
+        _.ok {should_redirect?(_.new_env('PUT'   , '/'))} == false
+        _.ok {should_redirect?(_.new_env('DELETE', '/'))} == false
+        _.ok {should_redirect?(_.new_env('HEAD'  , '/'))} == false
+        _.ok {should_redirect?(_.new_env('PATCH' , '/'))} == false
+      end
+    end
+
+    it "[!ycpqj] returns true when request method is GET or HEAD." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {should_redirect?(_.new_env('GET'   , '/index'))} == true
+        _.ok {should_redirect?(_.new_env('HEAD'  , '/index'))} == true
+      end
+    end
+
+    it "[!7q8xu] returns false when request method is POST, PUT or DELETE." do
+      jet_router.instance_exec(self) do |_|
+        _.ok {should_redirect?(_.new_env('POST'  , '/index'))} == false
+        _.ok {should_redirect?(_.new_env('PUT'   , '/index'))} == false
+        _.ok {should_redirect?(_.new_env('DELETE', '/index'))} == false
+        _.ok {should_redirect?(_.new_env('PATCH' , '/index'))} == false
+      end
+    end
+
+  end
+
+
   describe '#error_not_found()' do
 
     it "[!mlruv] returns 404 response." do
@@ -589,6 +621,13 @@ describe Rack::JetRouter do
     it "[!3vsua] doesn't redict automatically when request path is '/'." do
       r = Rack::JetRouter.new([['/api/books', book_list_api]])
       ok {r.call(new_env(:GET, '/'))} == [404, {"Content-Type"=>"text/plain"}, ["404 Not Found"]]
+    end
+
+    it "[!hyk62] adds QUERY_STRING to redirect location." do
+      headers = {"Content-Type"=>"text/plain", "Location"=>"/api/books?x=1&y=2"}
+      content = "Redirect to /api/books?x=1&y=2"
+      env = new_env(:GET, '/api/books/', {"QUERY_STRING"=>"x=1&y=2"})
+      ok {jet_router.call(env)} == [301, headers, [content]]
     end
 
     it "[!30x0k] returns 404 when request urlpath not found." do
