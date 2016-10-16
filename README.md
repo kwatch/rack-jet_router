@@ -10,22 +10,40 @@ Rack::JetRouter requires Ruby >= 2.0.
 
 ## Benchmark
 
-Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/dev/bench/bench.rb).
+Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/release/bench/bench.rb).
 
-### JetRouter vs. Rack vs. Sinatra vs. Keight.rb:
+| Name               | Version |
+| ------------------ | ------- |
+| Ruby               | 2.3.1   |
+| Rack               | 1.6.4   |
+| Rack::JetRouter    | 1.2.0   |
+| Rack::Multiplexer  | 0.0.8   |
+| Sinatra            | 1.4.6   |
+| Keight.rb          | 0.3.0   |
+| Hanami             | 0.8.0   |
+
+(Macbook Air, Intel Core i7 1.7GHz, OS X EL Capitan)
+
+
+### JetRouter vs. Rack vs. Sinatra vs. Keight.rb vs. Hanami:
 
 ```
-## Ranking                         usec/req  Graph (longer=faster)
-(Rack plain)  /api/aaa01             1.0619  ***************
-(Rack plain)  /api/aaa01/123         0.8729  ******************
-(R::Req+Res)  /api/aaa01             9.5361  **
-(R::Req+Res)  /api/aaa01/123         9.5321  **
-(JetRouter)   /api/aaa01             1.3231  ************
-(JetRouter)   /api/aaa01/123         5.9796  ***
-(Keight.rb)   /api/aaa01             6.4314  **
-(Keight.rb)   /api/aaa01/123        10.2339  **
-(Sinatra)     /api/aaa01           104.7575
-(Sinatra)     /api/aaa01/123       115.8220
+## Ranking                             real
+(Rack plain)  /api/aaa01             0.9316 (100.0%) ********************
+(Rack plain)  /api/aaa01/123         1.0222 ( 91.1%) ******************
+(JetRouter)   /api/aaa01             1.4191 ( 65.6%) *************
+(JetRouter)   /api/aaa01/123         6.0146 ( 15.5%) ***
+(Multiplexer) /api/aaa01             6.1026 ( 15.3%) ***
+(Keight.rb)   /api/aaa01             7.2330 ( 12.9%) ***
+(R::Req+Res)  /api/aaa01            10.7835 (  8.6%) **
+(R::Req+Res)  /api/aaa01/123        10.8412 (  8.6%) **
+(Keight.rb)   /api/aaa01/123        10.8708 (  8.6%) **
+(Hanami::Router) /api/zzz26         11.5185 (  8.1%) **
+(Hanami::Router) /api/aaa01         11.7033 (  8.0%) **
+(Hanami::Router) /api/aaa01/123     17.9229 (  5.2%) *
+(Multiplexer) /api/aaa01/123        18.6987 (  5.0%) *
+(Sinatra)     /api/aaa01           109.7597 (  0.8%) 
+(Sinatra)     /api/aaa01/123       121.3258 (  0.8%) 
 ```
 
 * If URL path has no path parameter (such as `/api/hello`),
@@ -34,6 +52,7 @@ Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/dev/be
   Rack::JetRouter becomes slower, but it is enough small (about 6usec/req).
 * Overhead of Rack::JetRouter is smaller than that of Rack::Reqeuast +
   Rack::Response.
+* Hanami is a litte slow.
 * Sinatra is too slow.
 
 
@@ -41,17 +60,18 @@ Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/dev/be
 
 ```
 ## Ranking                         usec/req  Graph (longer=faster)
-(JetRouter)   /api/aaa01             1.3231  ************
-(JetRouter)   /api/aaa01/123         5.9796  ***
-(JetRouter)   /api/zzz26             1.4089  ***********
-(JetRouter)   /api/zzz26/789         6.5142  **
-(Multiplexer) /api/aaa01             5.9073  ***
-(Multiplexer) /api/aaa01/123        18.2102  *
-(Multiplexer) /api/zzz26            24.4013  *
-(Multiplexer) /api/zzz26/789        36.1558
+(JetRouter)   /api/aaa01             1.4191 ( 65.6%) *************
+(JetRouter)   /api/zzz26             1.4300 ( 65.1%) *************
+(JetRouter)   /api/aaa01/123         6.0146 ( 15.5%) ***
+(Multiplexer) /api/aaa01             6.1026 ( 15.3%) ***
+(JetRouter)   /api/zzz26/789         6.9102 ( 13.5%) ***
+(Multiplexer) /api/aaa01/123        18.6987 (  5.0%) *
+(Multiplexer) /api/zzz26            30.7618 (  3.0%) *
+(Multiplexer) /api/zzz26/789        42.6660 (  2.2%) 
 ```
 
-* JetRouter is about 3~5 times faster than Rack::Multiplexer.
+* JetRouter is about 4~6 times faster than Rack::Multiplexer.
+* Rack::Multiplexer is getting worse in promotion to the number of URL paths.
 
 
 ## Examples
