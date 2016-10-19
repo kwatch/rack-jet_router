@@ -47,7 +47,7 @@ Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/releas
 ```
 
 * If URL path has no path parameter (such as `/api/hello`),
-  Rack::JetRouter is a litte shower than plain Rack application.
+  Rack::JetRouter is a litte slower than plain Rack application.
 * If URL path contains path parameter (such as `/api/hello/:id`),
   Rack::JetRouter becomes slower, but it is enough small (about 6usec/req).
 * Overhead of Rack::JetRouter is smaller than that of Rack::Reqeuast +
