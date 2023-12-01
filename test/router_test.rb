@@ -6,7 +6,7 @@
 ### $License: MIT License $
 ###
 
-require_relative './test_helper'
+require_relative './shared'
 
 
 describe Rack::JetRouter do
