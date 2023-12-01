@@ -104,15 +104,15 @@ topic Rack::JetRouter do
       end
     end
 
-    spec "[!rpezs] converts '/books/:id' into '/books/([^./]+)'." do
+    spec "[!rpezs] converts '/books/:id' into '/books/([^./?]+)'." do
       jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/books/:id')} == ['/books/([^./]+)', ['id']]
+        _.ok {compile_urlpath_pattern('/books/:id')} == ['/books/([^./?]+)', ['id']]
       end
     end
 
-    spec "[!4dcsa] converts '/index(.:format)' into '/index(?:\.([^./]+))?'." do
+    spec "[!4dcsa] converts '/index(.:format)' into '/index(?:\.([^./?]+))?'." do
       jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/index(.:format)')} == ['/index(?:\.([^./]+))?', ['format']]
+        _.ok {compile_urlpath_pattern('/index(.:format)')} == ['/index(?:\.([^./?]+))?', ['format']]
       end
     end
 
@@ -124,8 +124,8 @@ topic Rack::JetRouter do
 
     spec "[!of1zq] returns compiled string and urlpath param names when urlpath param or parens exist." do
       jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/books/:id')} == ['/books/([^./]+)', ['id']]
-        _.ok {compile_urlpath_pattern('/books/:id(.:format)')} == ['/books/([^./]+)(?:\.([^./]+))?', ['id', 'format']]
+        _.ok {compile_urlpath_pattern('/books/:id')} == ['/books/([^./?]+)', ['id']]
+        _.ok {compile_urlpath_pattern('/books/:id(.:format)')} == ['/books/([^./?]+)(?:\.([^./?]+))?', ['id', 'format']]
         _.ok {compile_urlpath_pattern('/index(.html)')} == ['/index(?:\.html)?', []]
       end
     end
@@ -142,7 +142,7 @@ topic Rack::JetRouter do
       ]
       expected = '
           \A
-              /books/[^./]+(\z)
+              /books/[^./?]+(\z)
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -152,7 +152,7 @@ topic Rack::JetRouter do
           '/'                => welcome_app,
         }
         _.ok {list} == [
-          [%r'\A/books/([^./]+)\z',      ['id'], book_show_api, (7..-1)],
+          [%r'\A/books/([^./?]+)\z',      ['id'], book_show_api, (7..-1)],
         ]
       end
     end
@@ -175,11 +175,11 @@ topic Rack::JetRouter do
               (?:
               /api
                       /books
-                          /[^./]+(\z)
+                          /[^./?]+(\z)
               |
               /admin
                       /books
-                          /[^./]+(\z)
+                          /[^./?]+(\z)
               )
           \z
       '.gsub(/\s+/, '')
@@ -188,8 +188,8 @@ topic Rack::JetRouter do
         _.ok {rexp} == Regexp.new(expected)
         _.ok {dict} == {}
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
-          [%r'\A/admin/books/([^./]+)\z',  ['id'], admin_book_show_app, (13..-1)],
+          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
+          [%r'\A/admin/books/([^./?]+)\z',  ['id'], admin_book_show_app, (13..-1)],
         ]
       end
     end
@@ -207,7 +207,7 @@ topic Rack::JetRouter do
           ]],
         ]],
       ]
-      expected = '\A/api/books2/[^./]+(\z)\z'
+      expected = '\A/api/books2/[^./?]+(\z)\z'
       jet_router.instance_exec(self) do |_|
         rexp, dict, list = compile_mapping(mapping)
         _.ok {rexp} == Regexp.new(expected)
@@ -217,7 +217,7 @@ topic Rack::JetRouter do
           '/api/books/new'   => book_new_api,
         }
         _.ok {list} == [
-          [%r'\A/api/books2/([^./]+)\z',  ['id'], book_show_api, (12..-1)],
+          [%r'\A/api/books2/([^./?]+)\z',  ['id'], book_show_api, (12..-1)],
         ]
       end
     end
@@ -234,7 +234,7 @@ topic Rack::JetRouter do
           \A
             /api
               /books
-                /[^./]+(\z)
+                /[^./?]+(\z)
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -242,7 +242,7 @@ topic Rack::JetRouter do
         _.ok {rexp} == Regexp.new(expected)
         _.ok {dict} == {}
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
+          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -272,7 +272,7 @@ topic Rack::JetRouter do
       ]
       expected = '
           \A
-              /api/books/[^./]+(\z)
+              /api/books/[^./?]+(\z)
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -281,7 +281,7 @@ topic Rack::JetRouter do
         _.ok {dict} == {
         }
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
+          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -294,7 +294,7 @@ topic Rack::JetRouter do
       ]
       expected = '
           \A
-              /api/books/[^./]+(\z)
+              /api/books/[^./?]+(\z)
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -305,7 +305,7 @@ topic Rack::JetRouter do
           '/api/books'       => book_list_api,
         }
         _.ok {list} == [
-          [%r'\A/api/books/([^./]+)\z',  ['id'], book_show_api, (11..-1)],
+          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
         ]
       end
     end
@@ -326,7 +326,7 @@ topic Rack::JetRouter do
               /admin
                   /api
                       /books
-                          /[^./]+(\z)
+                          /[^./?]+(\z)
           \z
       '.gsub(/\s+/, '')
       jet_router.instance_exec(self) do |_|
@@ -336,7 +336,7 @@ topic Rack::JetRouter do
           '/admin/api/books'       => book_list_api,
         }
         _.ok {list} == [
-          [%r'\A/admin/api/books/([^./]+)\z',  ['id'], book_show_api, (17..-1)],
+          [%r'\A/admin/api/books/([^./?]+)\z',  ['id'], book_show_api, (17..-1)],
         ]
       end
     end
@@ -446,15 +446,15 @@ topic Rack::JetRouter do
                 /api
                     (?:
                         /books
-                            (?:/[^./]+(\z)|/[^./]+/edit(\z))
+                            (?:/[^./?]+(\z)|/[^./?]+/edit(\z))
                     |
-                        /books/[^./]+/comments
-                            (?:(\z)|/[^./]+(\z))
+                        /books/[^./?]+/comments
+                            (?:(\z)|/[^./?]+(\z))
                     )
             |
                 /admin
                     /books
-                        /[^./]+(\z)
+                        /[^./?]+(\z)
             )
             \z
         '.gsub(/\s+/, '')
@@ -470,11 +470,11 @@ topic Rack::JetRouter do
           },
         }
         _.ok {@variable_urlpath_list} == [
-          [%r'\A/api/books/([^./]+)\z',      ['id'], book_show_api, (11..-1)],
-          [%r'\A/api/books/([^./]+)/edit\z', ['id'], book_edit_api, (11..-6)],
-          [%r'\A/api/books/([^./]+)/comments\z',          ['book_id'], comment_create_api, (11..-10)],
-          [%r'\A/api/books/([^./]+)/comments/([^./]+)\z', ['book_id', 'comment_id'], comment_update_api, nil],
-          [%r'\A/admin/books/([^./]+)\z',    ['id'], {'GET'    => admin_book_show_app,
+          [%r'\A/api/books/([^./?]+)\z',      ['id'], book_show_api, (11..-1)],
+          [%r'\A/api/books/([^./?]+)/edit\z', ['id'], book_edit_api, (11..-6)],
+          [%r'\A/api/books/([^./?]+)/comments\z',          ['book_id'], comment_create_api, (11..-10)],
+          [%r'\A/api/books/([^./?]+)/comments/([^./?]+)\z', ['book_id', 'comment_id'], comment_update_api, nil],
+          [%r'\A/admin/books/([^./?]+)\z',    ['id'], {'GET'    => admin_book_show_app,
                                                       'PUT'    => admin_book_update_app,
                                                       'DELETE' => admin_book_delete_app}, (13..-1)],
         ]

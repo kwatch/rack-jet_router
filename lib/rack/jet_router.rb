@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# frozen_string_literal: true
 
 ###
 ### $Release: 0.0.0 $
@@ -62,8 +63,8 @@ module Rack
       @enable_urlpath_param_range = enable_urlpath_param_range
       #; [!u2ff4] compiles urlpath mapping.
       (@urlpath_rexp,          # ex: {'/api/books'=>BooksApp}
-       @fixed_urlpath_dict,    # ex: [[%r'\A/api/books/([^./]+)\z', ['id'], BookApp]]
-       @variable_urlpath_list, # ex: %r'\A(?:/api(?:/books(?:/[^./]+(\z))))\z'
+       @fixed_urlpath_dict,    # ex: [[%r'\A/api/books/([^./?]+)\z', ['id'], BookApp]]
+       @variable_urlpath_list, # ex: %r'\A(?:/api(?:/books(?:/[^./?]+(\z))))\z'
        @all_entrypoints,       # ex: [['/api/books', BooksAPI'], ['/api/orders', OrdersAPI]]
       ) = compile_mapping(mapping)
       ## cache for variable urlpath (= containg urlpath parameters)
@@ -224,8 +225,8 @@ module Rack
       ## entry points which has one or more urlpath parameters
       ## ex:
       ##   [
-      ##     [%r!\A/api/books/([^./]+)\z!,   ["id"], BookApp,   (11..-1)],
-      ##     [%r!\A/api/authors/([^./]+)\z!, ["id"], AuthorApp, (12..-1)],
+      ##     [%r!\A/api/books/([^./?]+)\z!,   ["id"], BookApp,   (11..-1)],
+      ##     [%r!\A/api/authors/([^./?]+)\z!, ["id"], AuthorApp, (12..-1)],
       ##   ]
       list = []
       #
@@ -240,7 +241,7 @@ module Rack
           dict[urlpath_pat] = obj
         end
       end
-      ## ex: %r!^A(?:api(?:/books/[^./]+(\z)|/authors/[^./]+(\z)))\z!
+      ## ex: %r!^A(?:api(?:/books/[^./?]+(\z)|/authors/[^./?]+(\z)))\z!
       urlpath_rexp = Regexp.new("\\A#{rexp_str}\\z")
       #; [!xzo7k] returns regexp, hash, and array.
       return urlpath_rexp, dict, list, all
@@ -283,10 +284,10 @@ module Rack
       return "#{parent_urlpath_rexp_str}(?:#{arr.join('|')})"
     end
 
-    ## Compiles '/books/:id' into ['/books/([^./]+)', ["id"]].
+    ## Compiles '/books/:id' into ['/books/([^./?]+)', ["id"]].
     def compile_urlpath_pattern(urlpath_pat, enable_capture=true)
       s = "".dup()
-      param_pat = enable_capture ? '([^./]+)' : '[^./]+'
+      param_pat = enable_capture ? '([^./?]+)' : '[^./?]+'
       param_names = []
       pos = 0
       urlpath_pat.scan(/:(\w+)|\((.*?)\)/) do |name, optional|
@@ -295,11 +296,11 @@ module Rack
         text = urlpath_pat[pos...m.begin(0)]
         pos = m.end(0)
         s << Regexp.escape(text)
-        #; [!rpezs] converts '/books/:id' into '/books/([^./]+)'.
+        #; [!rpezs] converts '/books/:id' into '/books/([^./?]+)'.
         if name
           param_names << name
           s << param_pat
-        #; [!4dcsa] converts '/index(.:format)' into '/index(?:\.([^./]+))?'.
+        #; [!4dcsa] converts '/index(.:format)' into '/index(?:\.([^./?]+))?'.
         elsif optional
           s << '(?:'
           optional.scan(/(.*?)(?::(\w+))/) do |text2, name2|
