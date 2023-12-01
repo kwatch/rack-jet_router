@@ -284,39 +284,3 @@ Above methods are invoked from `Rack::JetRouter#call()`.
 $Copyright: copyright(c) 2015-2016 kuwata-lab.com all rights reserved $
 
 $License: MIT License $
-
-
-## History
-
-
-### 2016-10-16: Release 1.2.0
-
-* Change auto-redirection to be occurred only on GET or HEAD methods.
-* Code is rewrited, especially around `Rack::JetRouter#compile_mapping()`.
-* Update benchmark script to support `Hanabi::Router`.
-
-
-### 2015-12-29: Release 1.1.1
-
-* Fix benchmark script.
-* Fix document.
-
-
-### 2015-12-28: Release 1.1.0
-
-* **NOTICE** `Rack::JetRouter#find()` is renamed to `#lookup()`.<br>
-  `#find()` is also available for compatibility, but not recommended.
-* Performance improved when number of URL path parameter is 1.
-* Regular expression generated is improved.
-* Benchmark script is improved to take some command-line options.
-* Document fixed.
-
-
-### 2015-12-06: Release 1.0.1
-
-* Fix document
-
-
-### 2015-12-06: Release 1.0.0
-
-* First release
