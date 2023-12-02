@@ -19,39 +19,39 @@ module Rack
   ## ex:
   ##   ### (assume that 'xxxx_app' are certain Rack applications.)
   ##   mapping = {
-  ##       '/'                       => home_app,
-  ##       '/api' => {
-  ##           '/books' => {
-  ##               ''                => books_app,
-  ##               '/:id(.:format)'  => book_app,
-  ##               '/:book_id/comments/:comment_id' => comment_app,
+  ##       "/"                       => home_app,
+  ##       "/api" => {
+  ##           "/books" => {
+  ##               ""                => books_app,
+  ##               "/:id(.:format)"  => book_app,
+  ##               "/:book_id/comments/:comment_id" => comment_app,
   ##           },
   ##       },
-  ##       '/admin' => {
-  ##           '/books'              => admin_books_app,
+  ##       "/admin" => {
+  ##           "/books"              => admin_books_app,
   ##       },
   ##   }
   ##   router = Rack::JetRouter.new(mapping)
-  ##   router.lookup('/api/books/123.html')
+  ##   router.lookup("/api/books/123.html")
   ##       #=> [book_app, {"id"=>"123", "format"=>"html"}]
   ##   status, headers, body = router.call(env)
   ##
   ##   ### or:
   ##   mapping = [
-  ##       ['/'                       , {GET: home_app}],
-  ##       ['/api', [
-  ##           ['/books', [
-  ##               [''                , {GET: book_list_app, POST: book_create_app}],
-  ##               ['/:id(.:format)'  , {GET: book_show_app, PUT: book_update_app}],
-  ##               ['/:book_id/comments/:comment_id', {POST: comment_create_app}],
+  ##       ["/"                       , {GET: home_app}],
+  ##       ["/api", [
+  ##           ["/books", [
+  ##               [""                , {GET: book_list_app, POST: book_create_app}],
+  ##               ["/:id(.:format)"  , {GET: book_show_app, PUT: book_update_app}],
+  ##               ["/:book_id/comments/:comment_id", {POST: comment_create_app}],
   ##           ]],
   ##       ]],
-  ##       ['/admin', [
-  ##           ['/books'              , {ANY: admin_books_app}],
+  ##       ["/admin", [
+  ##           ["/books"              , {ANY: admin_books_app}],
   ##       ]],
   ##   ]
   ##   router = Rack::JetRouter.new(mapping)
-  ##   router.lookup('/api/books/123')
+  ##   router.lookup("/api/books/123")
   ##       #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
   ##   status, headers, body = router.call(env)
   ##
@@ -290,23 +290,23 @@ module Rack
       @variable_urlpath_cache = urlpath_cache_size > 0 ? {} : nil
       @enable_urlpath_param_range = enable_urlpath_param_range
       ##
-      ## entry points which has no urlpath parameters.
+      ## Entry points without any path parameters.
       ## ex:
       ##   {
-      ##     '/'          => home_app,
-      ##     '/api/books' => books_app,
-      ##     '/api/orders => orders_app,
+      ##     "/"           => home_app,
+      ##     "/api/books"  => books_app,
+      ##     "/api/orders" => orders_app,
       ##   }
       ##
       @fixed_urlpath_dict = {}
       ##
-      ## pair list of urlpath and handlers.
+      ## Pair list of path and Rack app.
       ## ex:
       ##   [
-      ##     ['/api/books'     , books_app ],
-      ##     ['/api/books/:id' , book_app  ],
-      ##     ['/api/orders'    , orders_app],
-      ##     ['/api/orders/:id', order_app ],
+      ##     ["/api/books"      , books_app ],
+      ##     ["/api/books/:id"  , book_app  ],
+      ##     ["/api/orders"     , orders_app],
+      ##     ["/api/orders/:id" , order_app ],
       ##   ]
       ##
       @all_entrypoints    = []
@@ -318,7 +318,7 @@ module Rack
         @all_entrypoints << [path, item]
       end
       ##
-      ## entry points which has one or more urlpath parameters.
+      ## Entry points with one or more path parameters.
       ## ex:
       ##   [
       ##     [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
@@ -327,7 +327,7 @@ module Rack
       ##
       @variable_urlpath_list = tuples = []
       ##
-      ## conbined regexp of variable urlpath patterns.
+      ## Combined regexp of variable urlpath patterns.
       ## ex:
       ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
       ##
@@ -396,7 +396,7 @@ module Rack
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
       full_urlpath_rexp, param_names, obj, range = @variable_urlpath_list[index]
       if range
-        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")
+        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
         str = req_path[range]
         param_values = [str]
       else
