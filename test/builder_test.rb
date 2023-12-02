@@ -44,7 +44,7 @@ Oktest.scope do
     end
 
 
-    topic '#build_nested_dict()' do
+    topic '#build_tree()' do
 
       spec "[!6oa05] builds nested hash object from mapping data." do
         mapping = [
@@ -61,7 +61,7 @@ Oktest.scope do
             ]],
           ]],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
@@ -99,7 +99,7 @@ Oktest.scope do
           ]],
         ]
         actuals = []
-        dict = @builder.build_nested_dict(mapping) {|path, item, _| actuals << [path, item] }
+        dict = @builder.build_tree(mapping) {|path, item, _| actuals << [path, item] }
         ok {actuals} == [
           ["/api/books/new", {"GET"=>book_new_api}],
           ["/api/books/:id", {"GET"=>book_show_api, "DELETE"=>book_delete_api}],
@@ -127,7 +127,7 @@ Oktest.scope do
           ]],
         ]
         actuals = []
-        dict = @builder.build_nested_dict(mapping) {|path, _, fixed_p|
+        dict = @builder.build_tree(mapping) {|path, _, fixed_p|
           actuals << [path, fixed_p]
         }
         id = '[^./?]+'
@@ -146,7 +146,7 @@ Oktest.scope do
             ]],
           ]],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
@@ -176,7 +176,7 @@ Oktest.scope do
           ]],
         ]
         actuals = []
-        dict = @builder.build_nested_dict(mapping) do |path, item, fixed_p|
+        dict = @builder.build_tree(mapping) do |path, item, fixed_p|
           actuals << [path, item, fixed_p]
         end
         id = '[^./?]+'
@@ -201,7 +201,7 @@ Oktest.scope do
         mapping = [
           ["/api/books/:id", book_show_api],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple[0]} == %r`\A/api/books/(#{id})\z`
@@ -211,7 +211,7 @@ Oktest.scope do
         mapping = [
           ["/api/books/:id", book_show_api],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         ok {dict["/api/books/"].keys()} == [:'[^./?]+']
       end
 
@@ -219,7 +219,7 @@ Oktest.scope do
         mapping = [
           ["/api/books.dir.tmp/:id.tar.gz", book_show_api],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple[0]} == %r`\A/api/books\.dir\.tmp/(#{id})\.tar\.gz\z`
@@ -231,7 +231,7 @@ Oktest.scope do
             ["/:id(.:format)(.gz)", book_show_api],
           ]],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple[0]} == %r`\A/api/books/(#{id})(?:\.(#{id}))?(?:\.gz)?\z`
@@ -241,7 +241,7 @@ Oktest.scope do
         mapping = [
           ["/api/books/:id.json", book_show_api],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple} == [%r`\A/api/books/(#{id})\.json\z`,
@@ -252,7 +252,7 @@ Oktest.scope do
         mapping = [
           ["/api/books/:id.json", book_show_api],
         ]
-        dict = @builder.build_nested_dict(mapping)
+        dict = @builder.build_tree(mapping)
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
@@ -276,7 +276,7 @@ Oktest.scope do
           ]],
         ]
         actuals = []
-        dict = @builder.build_nested_dict(mapping) {|*args| actuals << args }
+        dict = @builder.build_tree(mapping) {|*args| actuals << args }
         id = '[^./?]+'
         ok {actuals} == [
           ["/api/books/new", book_new_api , true],

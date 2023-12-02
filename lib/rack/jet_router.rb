@@ -71,10 +71,10 @@ module Rack
         @enable_urlpath_param_range = enable_urlpath_param_range
       end
 
-      def build_nested_dict(mapping, &callback)
+      def build_tree(mapping, &callback)
         block_given_p = block_given?()
         #; [!6oa05] builds nested hash object from mapping data.
-        nested_dict = {}
+        tree = {}
         param_d = {}
         _traverse_mapping(mapping, "", mapping.class) do |path, item|
           #; [!j0pes] if item is a hash object, converts keys from symbol to string.
@@ -82,7 +82,7 @@ module Rack
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
           variable_p = (path =~ /:\w|\(.*?\)/)
           if variable_p
-            d = nested_dict
+            d = tree
             sb = ['\A']
             pos = 0
             params = []
@@ -120,7 +120,7 @@ module Rack
           fixed_p = ! variable_p
           yield path, item, fixed_p if block_given_p
         end
-        return nested_dict
+        return tree
       end
 
       private
@@ -240,10 +240,10 @@ module Rack
         return @router.param_pattern(param)    # ex: '[^./?]+'
       end
 
-      def build_rexp(nested_dict, &callback)
+      def build_rexp(tree, &callback)
         #; [!65yw6] converts nested dict into regexp.
         sb = ['\A']
-        _build_rexp(nested_dict, sb, &callback)
+        _build_rexp(tree, sb, &callback)
         sb << '\z'
         return Regexp.compile(sb.join())
       end
@@ -312,7 +312,7 @@ module Rack
       @all_entrypoints    = []
       #; [!u2ff4] compiles urlpath mapping.
       builder = Builder.new(self, enable_urlpath_param_range)
-      nested_dict = builder.build_nested_dict(mapping) do |path, item, fixed_p|
+      tree = builder.build_tree(mapping) do |path, item, fixed_p|
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
         @fixed_urlpath_dict[path] = item if fixed_p
         @all_entrypoints << [path, item]
@@ -331,7 +331,7 @@ module Rack
       ## ex:
       ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
       ##
-      @urlpath_rexp = builder.build_rexp(nested_dict) {|tuple| tuples << tuple }
+      @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
     end
 
     attr_reader :urlpath_rexp
