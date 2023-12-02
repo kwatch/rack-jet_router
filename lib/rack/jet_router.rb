@@ -17,41 +17,42 @@ module Rack
   ## Jet-speed router class, derived from Keight.rb.
   ##
   ## ex:
-  ##   urlpath_mapping = [
-  ##       ['/'                       , welcome_app],
-  ##       ['/api', [
-  ##           ['/books', [
-  ##               [''                , books_api],
-  ##               ['/:id(.:format)'  , book_api],
-  ##               ['/:book_id/comments/:comment_id', comment_api],
-  ##           ]],
-  ##       ]],
-  ##       ['/admin', [
-  ##           ['/books'              , admin_books_app],
-  ##       ]],
-  ##   ]
-  ##   router = Rack::JetRouter.new(urlpath_mapping)
+  ##   ### (assume that 'xxxx_app' are certain Rack applications.)
+  ##   mapping = {
+  ##       '/'                       => home_app,
+  ##       '/api' => {
+  ##           '/books' => {
+  ##               ''                => books_app,
+  ##               '/:id(.:format)'  => book_app,
+  ##               '/:book_id/comments/:comment_id' => comment_app,
+  ##           },
+  ##       },
+  ##       '/admin' => {
+  ##           '/books'              => admin_books_app,
+  ##       },
+  ##   }
+  ##   router = Rack::JetRouter.new(mapping)
   ##   router.lookup('/api/books/123.html')
-  ##       #=> [book_api, {"id"=>"123", "format"=>"html"}]
+  ##       #=> [book_app, {"id"=>"123", "format"=>"html"}]
   ##   status, headers, body = router.call(env)
   ##
   ##   ### or:
-  ##   urlpath_mapping = [
-  ##       ['/'                       , {GET: welcome_app}],
+  ##   mapping = [
+  ##       ['/'                       , {GET: home_app}],
   ##       ['/api', [
   ##           ['/books', [
-  ##               [''                , {GET: book_list_api, POST: book_create_api}],
-  ##               ['/:id(.:format)'  , {GET: book_show_api, PUT: book_update_api}],
-  ##               ['/:book_id/comments/:comment_id', {POST: comment_create_api}],
+  ##               [''                , {GET: book_list_app, POST: book_create_app}],
+  ##               ['/:id(.:format)'  , {GET: book_show_app, PUT: book_update_app}],
+  ##               ['/:book_id/comments/:comment_id', {POST: comment_create_app}],
   ##           ]],
   ##       ]],
   ##       ['/admin', [
   ##           ['/books'              , {ANY: admin_books_app}],
   ##       ]],
   ##   ]
-  ##   router = Rack::JetRouter.new(urlpath_mapping)
+  ##   router = Rack::JetRouter.new(mapping)
   ##   router.lookup('/api/books/123')
-  ##       #=> [{"GET"=>book_show_api, "PUT"=>book_update_api}, {"id"=>"123", "format"=>nil}]
+  ##       #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
   ##   status, headers, body = router.call(env)
   ##
   class JetRouter
@@ -60,19 +61,254 @@ module Rack
 
     def initialize(mapping, urlpath_cache_size: 0,
                             enable_urlpath_param_range: true)
-      @enable_urlpath_param_range = enable_urlpath_param_range
-      #; [!u2ff4] compiles urlpath mapping.
-      (@urlpath_rexp,          # ex: {'/api/books'=>BooksApp}
-       @fixed_urlpath_dict,    # ex: [[%r'\A/api/books/([^./?]+)\z', ['id'], BookApp]]
-       @variable_urlpath_list, # ex: %r'\A(?:/api(?:/books(?:/[^./?]+(\z))))\z'
-       @all_entrypoints,       # ex: [['/api/books', BooksAPI'], ['/api/orders', OrdersAPI]]
-      ) = compile_mapping(mapping)
-      ## cache for variable urlpath (= containg urlpath parameters)
-      @urlpath_cache_size = urlpath_cache_size
+      @urlpath_cache_size     = urlpath_cache_size
       @variable_urlpath_cache = urlpath_cache_size > 0 ? {} : nil
+      @enable_urlpath_param_range = enable_urlpath_param_range
+      ##
+      ## entry points which has no urlpath parameters.
+      ## ex:
+      ##   {
+      ##     '/'          => home_app,
+      ##     '/api/books' => books_app,
+      ##     '/api/orders => orders_app,
+      ##   }
+      ##
+      @fixed_urlpath_dict = {}
+      ##
+      ## pair list of urlpath and handlers.
+      ## ex:
+      ##   [
+      ##     ['/api/books'     , books_app ],
+      ##     ['/api/books/:id' , book_app  ],
+      ##     ['/api/orders'    , orders_app],
+      ##     ['/api/orders/:id', order_app ],
+      ##   ]
+      ##
+      @all_entrypoints    = []
+      #; [!u2ff4] compiles urlpath mapping.
+      nested_dict = _build_nested_dict(mapping) do |path, item, fixed_p|
+        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        @fixed_urlpath_dict[path] = item if fixed_p
+        @all_entrypoints << [path, item]
+      end
+      ##
+      ## entry points which has one or more urlpath parameters.
+      ## ex:
+      ##   [
+      ##     [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
+      ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
+      ##   ]
+      ##
+      @variable_urlpath_list = tuples = []
+      ##
+      ## conbined regexp of variable urlpath patterns.
+      ## ex:
+      ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
+      ##
+      @urlpath_rexp = _build_rexp(nested_dict) {|tuple| tuples << tuple }
     end
 
     attr_reader :urlpath_rexp
+
+    private
+
+    def _build_nested_dict(mapping, &callback)
+      block_given_p = block_given?()
+      #; [!6oa05] builds nested hash object from mapping data.
+      nested_dict = {}
+      param_d = {}
+      _traverse_mapping(mapping, "", mapping.class) do |path, item|
+        #; [!j0pes] if item is a hash object, converts keys from symbol to string.
+        item = normalize_mapping_keys(item) if item.is_a?(Hash)
+        #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
+        variable_p = (path =~ /:\w|\(.*?\)/)
+        if variable_p
+          d = nested_dict
+          sb = ['\A']
+          pos = 0
+          params = []
+          #; [!uyupj] handles urlpath parameter such as ':id'.
+          #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
+          path.scan(/:(\w+)|\((.*?)\)/) do
+            param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
+            m = Regexp.last_match()
+            str = path[pos, m.begin(0) - pos]
+            pos = m.end(0)
+            #; [!akkkx] converts urlpath param into regexp.
+            pat1, pat2 = _param_patterns(param, optional) do |param_|
+              param_.freeze
+              params << (param_d[param_] ||= param_)
+            end
+            #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
+            d = _next_dict(d, str) unless str.empty?
+            d = (d[pat1.intern] ||= {})       # ex: pat1=='[^./?]+'
+            #; [!zoym3] urlpath string should be escaped.
+            sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
+          end
+          #; [!o642c] remained string after param should be handled correctly.
+          str = pos == 0 ? path : path[pos..-1]
+          unless str.empty?
+            d = _next_dict(d, str)
+            sb << Regexp.escape(str)          # ex: str=='.html'
+          end
+          sb << '\z'
+          #; [!kz8m7] range object should be included into tuple if only one param exist.
+          range = @enable_urlpath_param_range ? range_of_urlpath_param(path) : nil
+          #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
+          d[nil] = [Regexp.compile(sb.join()), params, item, range]
+        end
+        #; [!gls5k] yields callback if given.
+        fixed_p = ! variable_p
+        yield path, item, fixed_p if block_given_p
+      end
+      return nested_dict
+    end
+
+    def _traverse_mapping(mapping, base_path, mapping_class, &block)
+      #; [!9s3f0] supports both nested list mapping and nested dict mapping.
+      mapping.each do |sub_path, item|
+        full_path = base_path + sub_path
+        #; [!2ntnk] nested dict mapping can have subclass of Hash as handlers.
+        if item.class == mapping_class
+          #; [!dj0sh] traverses mapping recursively.
+          _traverse_mapping(item, full_path, mapping_class, &block)
+        else
+          #; [!brhcs] yields block for each full path and handler.
+          yield full_path, item
+        end
+      end
+    end
+
+    def _next_dict(d, str)
+      #; [!s1rzs] if new key exists in dict...
+      if d.key?(str)
+        #; [!io47b] just returns corresponding value and not change dict.
+        return d[str]
+      end
+      #; [!3ndpz] returns next dict.
+      d2 = nil          # next dict
+      c = str[0]
+      found = false
+      d.keys.each do |key|
+        if found
+          #; [!5fh08] keeps order of keys in dict.
+          d[key] = d.delete(key)
+        #; [!4wdi7] ignores Symbol key (which represents regexp).
+        #; [!66sdb] ignores nil key (which represents leaf node).
+        elsif key.is_a?(String) && key[0] == c
+          found = true
+          prefix, rest1, rest2 = _common_prefix(key, str)
+          #; [!46o9b] if existing key is same as common prefix...
+          if rest1.empty?
+            #; [!4ypls] not replace existing key.
+            val = d[key]
+            d2 = _next_dict(val, rest2)
+            break
+          #; [!veq0q] if new key is same as common prefix...
+          elsif rest2.empty?
+            #; [!0tboh] replaces existing key with ney key.
+            val = d.delete(key)
+            d2 = {rest1 => val}
+            d[prefix] = d2
+          #; [!esszs] if common prefix is a part of exsting key and new key...
+          else
+            #; [!pesq0] replaces existing key with common prefix.
+            val = d.delete(key)
+            d2 = {}
+            d[prefix] = {rest1 => val, rest2 => d2}
+          end
+        end
+      end
+      #; [!viovl] if new key has no common prefix with existing keys...
+      unless found
+        #; [!i6smv] adds empty dict with new key.
+        d2 = {}
+        d[str] = d2
+      end
+      return d2
+    end
+
+    def _common_prefix(str1, str2)    # ex: "/api/books/" and "/api/blog/"
+      #; [!86tsd] calculates common prefix of two strings.
+      #n = [str1.length, str2.length].min()
+      n1 = str1.length; n2 = str2.length
+      n = n1 < n2 ? n1 : n2
+      i = 0
+      while i < n && str1[i] == str2[i]
+        i += 1
+      end
+      #; [!1z2ii] returns common prefix and rest of strings.
+      prefix = str1[0...i]            # ex: "/api/b"
+      rest1  = str1[i..-1]            # ex: "ooks/"
+      rest2  = str2[i..-1]            # ex: "log/"
+      return prefix, rest1, rest2
+    end
+
+    def _param_patterns(param, optional, &callback)
+      #; [!j90mw] returns '[^./?]+' and '([^./?]+)' if param specified.
+      if param
+        optional == nil  or raise "** internal error"
+        yield param
+        pat1 = param_pattern(param)
+        pat2 = "(#{pat1})"
+      #; [!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'.
+      elsif optional == ".:format"
+        yield "format"
+        pat1 = '(?:\.[^./?]+)?'
+        pat2 = '(?:\.([^./?]+))?'
+      #; [!69yj9] optional string can contains other params.
+      elsif optional
+        sb = ['(?:']
+        optional.scan(/(.*?)(?::(\w+))/) do |str, param_|
+          pat = param_pattern(param)                # ex: pat == '[^./?]+'
+          sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
+          yield param_
+        end
+        sb << Regexp.escape($' || optional)
+        sb << ')?'
+        s = sb.join()
+        pat1 = s.gsub('<<', '' ).gsub('>>', '' )    # ex: '(?:\.[^./?]+)?'
+        pat2 = s.gsub('<<', '(').gsub('>>', ')')    # ex: '(?:\.([^./?]+))?'
+      else
+        raise "** internal error"
+      end
+      return pat1, pat2
+    end
+
+    def param_pattern(param)
+      #; [!6sd9b] converts regexp string according to param name.
+      #return '\d+' if param == "id" || param =~ /_id\z/
+      return '[^./?]+'
+    end
+    protected :param_pattern
+
+    def _build_rexp(nested_dict, &callback)
+      #; [!65yw6] converts nested dict into regexp.
+      sb = ['\A']
+      __build_rexp(nested_dict, sb, &callback)
+      sb << '\z'
+      return Regexp.compile(sb.join())
+    end
+
+    def __build_rexp(nested_dict, sb, &b)
+      #; [!hs7vl] '(?:)' and '|' are added only if necessary.
+      sb << '(?:' if nested_dict.length > 1
+      nested_dict.each_with_index do |(k, v), i|
+        sb << '|' if i > 0
+        #; [!7v7yo] nil key means leaf node and yields block argument.
+        #; [!hda6m] string key should be escaped.
+        #; [!b9hxc] symbol key means regexp string.
+        case k
+        when nil    ; sb << '(\z)'           ; yield v
+        when String ; sb << Regexp.escape(k) ; __build_rexp(v, sb, &b)
+        when Symbol ; sb << k.to_s           ; __build_rexp(v, sb, &b)
+        else        ; raise "** internal error"
+        end
+      end
+      sb << ')' if nested_dict.length > 1
+    end
+
+    public
 
     ## Finds rack app according to PATH_INFO and REQUEST_METHOD and invokes it.
     def call(env)
@@ -209,119 +445,6 @@ module Rack
     ##     end
     def build_urlpath_parameter_vars(names, values)
       return Hash[names.zip(values)]
-    end
-
-    private
-
-    ## Compiles urlpath mapping. Called from '#initialize()'.
-    def compile_mapping(mapping)
-      ## entry points which has no urlpath parameters
-      ## ex:
-      ##   { '/'           => HomeApp,
-      ##     '/api/books'  => BooksApp,
-      ##     '/api/authors => AuthorsApp,
-      ##   }
-      dict = {}
-      ## entry points which has one or more urlpath parameters
-      ## ex:
-      ##   [
-      ##     [%r!\A/api/books/([^./?]+)\z!,   ["id"], BookApp,   (11..-1)],
-      ##     [%r!\A/api/authors/([^./?]+)\z!, ["id"], AuthorApp, (12..-1)],
-      ##   ]
-      list = []
-      #
-      all = []
-      rexp_str = _compile_mapping(mapping, "", "") do |entry_point|
-        obj, urlpath_pat, urlpath_rexp, param_names = entry_point
-        all << [urlpath_pat, obj]
-        if urlpath_rexp
-          range = @enable_urlpath_param_range ? range_of_urlpath_param(urlpath_pat) : nil
-          list << [urlpath_rexp, param_names, obj, range]
-        else
-          dict[urlpath_pat] = obj
-        end
-      end
-      ## ex: %r!^A(?:api(?:/books/[^./?]+(\z)|/authors/[^./?]+(\z)))\z!
-      urlpath_rexp = Regexp.new("\\A#{rexp_str}\\z")
-      #; [!xzo7k] returns regexp, hash, and array.
-      return urlpath_rexp, dict, list, all
-    end
-
-    def _compile_mapping(mapping, base_urlpath, parent_urlpath, &block)
-      arr = []
-      mapping.each do |urlpath, obj|
-        full_urlpath = "#{base_urlpath}#{urlpath}"
-        #; [!ospaf] accepts nested mapping.
-        if obj.is_a?(Array)
-          rexp_str = _compile_mapping(obj, full_urlpath, urlpath, &block)
-        #; [!2ktpf] handles end-point.
-        else
-          #; [!guhdc] if mapping dict is specified...
-          if obj.is_a?(Hash)
-            obj = normalize_mapping_keys(obj)
-          end
-          #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
-          full_urlpath_rexp_str, param_names = compile_urlpath_pattern(full_urlpath, true)
-          if param_names   # has urlpath params
-            full_urlpath_rexp = Regexp.new("\\A#{full_urlpath_rexp_str}\\z")
-            rexp_str, _ = compile_urlpath_pattern(urlpath, false)
-            rexp_str << '(\z)'
-            entry_point = [obj, full_urlpath, full_urlpath_rexp, param_names]
-          #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-          else             # has no urlpath params
-            entry_point = [obj, full_urlpath, nil, nil]
-          end
-          yield entry_point
-        end
-        arr << rexp_str if rexp_str
-      end
-      #; [!pv2au] deletes unnecessary urlpath regexp.
-      return nil if arr.empty?
-      #; [!bh9lo] deletes unnecessary grouping.
-      parent_urlpath_rexp_str, _ = compile_urlpath_pattern(parent_urlpath, false)
-      return "#{parent_urlpath_rexp_str}#{arr[0]}" if arr.length == 1
-      #; [!iza1g] adds grouping if necessary.
-      return "#{parent_urlpath_rexp_str}(?:#{arr.join('|')})"
-    end
-
-    ## Compiles '/books/:id' into ['/books/([^./?]+)', ["id"]].
-    def compile_urlpath_pattern(urlpath_pat, enable_capture=true)
-      s = "".dup()
-      param_pat = enable_capture ? '([^./?]+)' : '[^./?]+'
-      param_names = []
-      pos = 0
-      urlpath_pat.scan(/:(\w+)|\((.*?)\)/) do |name, optional|
-        #; [!joozm] escapes metachars with backslash in text part.
-        m = Regexp.last_match
-        text = urlpath_pat[pos...m.begin(0)]
-        pos = m.end(0)
-        s << Regexp.escape(text)
-        #; [!rpezs] converts '/books/:id' into '/books/([^./?]+)'.
-        if name
-          param_names << name
-          s << param_pat
-        #; [!4dcsa] converts '/index(.:format)' into '/index(?:\.([^./?]+))?'.
-        elsif optional
-          s << '(?:'
-          optional.scan(/(.*?)(?::(\w+))/) do |text2, name2|
-            s << Regexp.escape(text2) << param_pat
-            param_names << name2
-          end
-          s << Regexp.escape($' || optional)
-          s << ')?'
-        #
-        else
-          raise "unreachable: urlpath=#{urlpath.inspect}"
-        end
-      end
-      #; [!1d5ya] rethrns compiled string and nil when no urlpath parameters nor parens.
-      #; [!of1zq] returns compiled string and urlpath param names when urlpath param or parens exist.
-      if pos == 0
-        return Regexp.escape(urlpath_pat), nil
-      else
-        s << Regexp.escape(urlpath_pat[pos..-1])
-        return s, param_names
-      end
     end
 
     def range_of_urlpath_param(urlpath_pattern)      # ex: '/books/:id/edit'
