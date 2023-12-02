@@ -12,6 +12,14 @@ require_relative './shared'
 Oktest.scope do
 
 
+class Map < Hash
+end
+
+def Map(**kwargs)
+  return Map.new.update(kwargs)
+end
+
+
 topic Rack::JetRouter do
 
   welcome_app      = proc {|env| [200, {}, ["welcome_app"]]}
@@ -66,6 +74,674 @@ topic Rack::JetRouter do
     return env
   end
 
+  def _find(d, k)
+    return d.key?(k) ? d[k] : _find(d.to_a[0][1], k)
+  end
+
+  before do
+    @router = Rack::JetRouter.new([])
+  end
+
+
+  topic '#_build_nested_dict()' do
+
+    spec "[!6oa05] builds nested hash object from mapping data." do
+      mapping = [
+        ['/api'           , [
+          ['/books'       , [
+            [''           , book_list_api],
+            ['/new'       , book_new_api],
+            ['/:id'       , book_show_api],
+            ['/:id/edit'  , book_edit_api],
+          ]],
+          ['/books/:book_id/comments', [
+            [''             , comment_create_api],
+            ['/:comment_id' , comment_update_api],
+          ]],
+        ]],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      id = '[^./?]+'
+      ok {dict} == {
+        "/api/books/" => {
+          :'[^./?]+' => {
+            nil => [/\A\/api\/books\/(#{id})\z/,
+                    ["id"], book_show_api, 11..-1],
+            "/" => {
+              "edit" => {
+                nil => [/\A\/api\/books\/(#{id})\/edit\z/,
+                        ["id"], book_edit_api, 11..-6],
+              },
+              "comments" => {
+                nil => [/\A\/api\/books\/(#{id})\/comments\z/,
+                        ["book_id"], comment_create_api, 11..-10],
+                "/" => {
+                  :'[^./?]+' => {
+                    nil => [/\A\/api\/books\/(#{id})\/comments\/(#{id})\z/,
+                            ["book_id", "comment_id"], comment_update_api, nil],
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+    end
+
+    spec "[!j0pes] if item is a hash object, converts keys from symbol to string." do
+      mapping = [
+        ['/api'           , [
+          ['/books'       , [
+            ['/new'       , {GET: book_new_api}],
+            ['/:id'       , {GET: book_show_api, DELETE: book_delete_api}],
+          ]],
+        ]],
+      ]
+      actuals = []
+      dict = @router.instance_eval {
+        _build_nested_dict(mapping) {|path, item, _| actuals << [path, item] }
+      }
+      ok {actuals} == [
+        ["/api/books/new", {"GET"=>book_new_api}],
+        ["/api/books/:id", {"GET"=>book_show_api, "DELETE"=>book_delete_api}],
+      ]
+      id = '[^./?]+'
+      #expected_map = {:GET=>book_show_api, :DELETE=>book_delete_api}
+      expected_map = {"GET"=>book_show_api, "DELETE"=>book_delete_api}
+      ok {dict} == {
+        "/api/books/" => {
+          :"[^./?]+"=> {
+            nil => [/\A\/api\/books\/(#{id})\z/,
+                    ["id"], expected_map, (11..-1)],
+          },
+        },
+      }
+    end
+
+    spec "[!vfytw] handles urlpath pattern as variable when urlpath param exists." do
+      mapping = [
+        ['/api', [
+          ['/books', [
+            ['/new'       , {GET: book_new_api}],
+            ['/:id'       , {GET: book_show_api}],
+          ]],
+        ]],
+      ]
+      actuals = []
+      @router.instance_eval {
+        _build_nested_dict(mapping) {|path, _, fixed_p| actuals << [path, fixed_p] }
+      }
+      id = '[^./?]+'
+      ok {actuals} == [
+        ["/api/books/new", true],
+        ["/api/books/:id", false],
+      ]
+    end
+
+    spec "[!uyupj] handles urlpath parameter such as ':id'." do
+      mapping = [
+        ['/api', [
+          ['/books/:book_id/comments', [
+            [''           , {POST: comment_create_api}],
+            ['/:id'       , {PUT: comment_update_api}],
+          ]],
+        ]],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      id = '[^./?]+'
+      ok {dict} == {
+        "/api/books/" => {
+          :"[^./?]+" => {
+            "/comments" => {
+              nil => [%r`\A/api/books/(#{id})/comments\z`,
+                      ["book_id"], {"POST"=>comment_create_api}, (11..-10)],
+              "/" => {
+                :"[^./?]+" => {
+                  nil => [%r`\A/api/books/(#{id})/comments/(#{id})\z`,
+                          ["book_id", "id"], {"PUT"=>comment_update_api}, nil],
+                },
+              },
+            },
+          },
+        },
+      }
+    end
+
+    spec "[!j9cdy] handles optional urlpath parameter such as '(.:format)'." do
+      mapping = [
+        ['/api', [
+          ['/books', [
+            ['(.:format)'           , {GET: book_list_api}],
+            ['/:id(.:format)'       , {GET: book_show_api}],
+          ]],
+        ]],
+      ]
+      actuals = []
+      dict = @router.instance_eval {
+        _build_nested_dict(mapping) do |path, item, fixed_p|
+          actuals << [path, item, fixed_p]
+        end
+      }
+      id = '[^./?]+'
+      ok {dict} == {
+        "/api/books" => {
+          :"(?:\\.[^./?]+)?" => {
+            nil => [%r`\A/api/books(?:\.(#{id}))?\z`,
+                    ["format"], {"GET"=>book_list_api}, (10..-1)]},
+          "/" => {
+            :"[^./?]+" => {
+              :"(?:\\.[^./?]+)?" => {
+                nil => [%r`\A/api/books/(#{id})(?:\.(#{id}))?\z`,
+                        ["id", "format"], {"GET"=>book_show_api}, nil],
+              },
+            },
+          },
+        },
+      }
+    end
+
+    spec "[!akkkx] converts urlpath param into regexp." do
+      mapping = [
+        ["/api/books/:id", book_show_api],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      tuple = _find(dict, nil)
+      id = '[^./?]+'
+      ok {tuple[0]} == %r`\A/api/books/(#{id})\z`
+    end
+
+    spec "[!po6o6] param regexp should be stored into nested dict as a Symbol." do
+      mapping = [
+        ["/api/books/:id", book_show_api],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      ok {dict["/api/books/"].keys()} == [:'[^./?]+']
+    end
+
+    spec "[!zoym3] urlpath string should be escaped." do
+      mapping = [
+        ["/api/books.dir.tmp/:id.tar.gz", book_show_api],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      tuple = _find(dict, nil)
+      id = '[^./?]+'
+      ok {tuple[0]} == %r`\A/api/books\.dir\.tmp/(#{id})\.tar\.gz\z`
+    end
+
+    spec "[!o642c] remained string after param should be handled correctly." do
+      mapping = [
+        ["/api/books", [
+          ["/:id(.:format)(.gz)", book_show_api],
+        ]],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      tuple = _find(dict, nil)
+      id = '[^./?]+'
+      ok {tuple[0]} == %r`\A/api/books/(#{id})(?:\.(#{id}))?(?:\.gz)?\z`
+    end
+
+    spec "[!kz8m7] range object should be included into tuple if only one param exist." do
+      mapping = [
+        ["/api/books/:id.json", book_show_api],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      tuple = _find(dict, nil)
+      id = '[^./?]+'
+      ok {tuple} == [%r`\A/api/books/(#{id})\.json\z`,
+                     ["id"], book_show_api, (11..-6)]
+    end
+
+    spec "[!c6xmp] tuple should be stored into nested dict with key 'nil'." do
+      mapping = [
+        ["/api/books/:id.json", book_show_api],
+      ]
+      dict = @router.instance_eval { _build_nested_dict(mapping) }
+      id = '[^./?]+'
+      ok {dict} == {
+        "/api/books/" => {
+          :"[^./?]+" => {
+            ".json" => {
+              nil => [%r`\A/api/books/(#{id})\.json\z`,
+                      ["id"], book_show_api, (11..-6)],
+            },
+          },
+        },
+      }
+    end
+
+    spec "[!gls5k] yields callback if given." do
+      mapping = [
+        ['/api', [
+          ['/books', [
+            ['/new'       , book_new_api],
+            ['/:id'       , book_show_api],
+          ]],
+        ]],
+      ]
+      actuals = []
+      @router.instance_eval {
+        _build_nested_dict(mapping) {|*args| actuals << args }
+      }
+      id = '[^./?]+'
+      ok {actuals} == [
+        ["/api/books/new", book_new_api , true],
+        ["/api/books/:id", book_show_api, false],
+      ]
+    end
+
+  end
+
+
+  topic '#_traverse_mapping()' do
+
+    spec "[!9s3f0] supports both nested list mapping and nested dict mapping." do
+      expected = [
+        ["/api/books"    , book_list_api],
+        ["/api/books/new", book_new_api ],
+        ["/api/books/:id", book_show_api],
+      ]
+      #
+      mapping1 = [
+        ['/api' , [
+          ['/books' , [
+            [''           , book_list_api],
+            ['/new'       , book_new_api],
+            ['/:id'       , book_show_api],
+          ]],
+        ]],
+      ]
+      actuals1 = []
+      @router.instance_eval do
+        _traverse_mapping(mapping1, "", mapping1.class) {|*args| actuals1 << args }
+      end
+      ok {actuals1} == expected
+      #
+      mapping2 = {
+        '/api' => {
+          '/books' => {
+            ''      => book_list_api,
+            '/new'  => book_new_api,
+            '/:id'  => book_show_api,
+          },
+        },
+      }
+      actuals2 = []
+      @router.instance_eval do
+        _traverse_mapping(mapping2, "", mapping2.class) {|*args| actuals2 << args }
+      end
+      ok {actuals2} == expected
+    end
+
+    spec "[!2ntnk] nested dict mapping can have subclass of Hash as handlers." do
+      ok {Map(GET: 1)}.is_a?(Map)
+      ok {Map(GET: 1)}.is_a?(Hash)
+      ok {Map} < Hash
+      #
+      mapping = {
+        '/api' => {
+          '/books' => {
+            ''      => Map(GET: book_list_api),
+            '/new'  => Map(GET: book_new_api),
+            '/:id'  => Map(GET: book_show_api, PUT: book_edit_api),
+          },
+        },
+      }
+      actuals = []
+      @router.instance_eval do
+        _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
+      end
+      ok {actuals} == [
+        ["/api/books"    , Map(GET: book_list_api)],
+        ["/api/books/new", Map(GET: book_new_api) ],
+        ["/api/books/:id", Map(GET: book_show_api, PUT: book_edit_api)],
+      ]
+    end
+
+    spec "[!dj0sh] traverses mapping recursively." do
+      mapping = [
+        ['/api'           , [
+          ['/books'       , [
+            [''           , book_list_api],
+            ['/new'       , book_new_api],
+            ['/:id'       , book_show_api],
+            ['/:id/edit'  , book_edit_api],
+          ]],
+          ['/books/:book_id/comments', [
+            [''             , comment_create_api],
+            ['/:comment_id' , comment_update_api],
+          ]],
+        ]],
+      ]
+      actuals = []
+      @router.instance_eval do
+        _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
+      end
+      ok {actuals} ==  [
+        ["/api/books"         , book_list_api],
+        ["/api/books/new"     , book_new_api],
+        ["/api/books/:id"     , book_show_api],
+        ["/api/books/:id/edit", book_edit_api],
+        ["/api/books/:book_id/comments"            , comment_create_api],
+        ["/api/books/:book_id/comments/:comment_id", comment_update_api],
+      ]
+    end
+
+    spec "[!brhcs] yields block for each full path and handler." do
+      mapping = {
+        '/api' => {
+          '/books' => {
+            ''          => book_list_api,
+            '/new'      => book_new_api,
+            '/:id'      => book_show_api,
+            '/:id/edit' => book_edit_api,
+          },
+          '/books/:book_id/comments' => {
+            ''             => comment_create_api,
+            '/:comment_id' => comment_update_api,
+          },
+        },
+      }
+      actuals = []
+      @router.instance_eval do
+        _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
+      end
+      ok {actuals} ==  [
+        ["/api/books"         , book_list_api],
+        ["/api/books/new"     , book_new_api],
+        ["/api/books/:id"     , book_show_api],
+        ["/api/books/:id/edit", book_edit_api],
+        ["/api/books/:book_id/comments"            , comment_create_api],
+        ["/api/books/:book_id/comments/:comment_id", comment_update_api],
+      ]
+    end
+  end
+
+
+  topic '#_next_dict()' do
+
+    case_when "[!s1rzs] if new key exists in dict..." do
+
+      spec "[!io47b] just returns corresponding value and not change dict." do
+        dict = {"a" => {"b" => 10}}
+        d2 = @router.instance_eval { _next_dict(dict, "a") }
+        ok {d2} == {"b" => 10}
+        ok {dict} == {"a" => {"b" => 10}}
+      end
+
+    end
+
+    spec "[!3ndpz] returns next dict." do
+      dict = {"aa1" => {"aa2"=>10}}
+      d2 = @router.instance_eval { _next_dict(dict, "aa8") }
+      ok {d2} == {}
+      ok {dict} == {"aa" => {"1" => {"aa2"=>10}, "8" => {}}}
+      ok {dict["aa"]["8"]}.same?(d2)
+    end
+
+    spec "[!5fh08] keeps order of keys in dict." do
+      dict = {"aa1" => {"aa2"=>10}, "bb1" => {"bb2"=>20}, "cc1" => {"cc2"=>30}}
+      d2 = @router.instance_eval { _next_dict(dict, "bb8") }
+      ok {d2} == {}
+      ok {dict} == {
+        "aa1" => {"aa2"=>10},
+        "bb"  => {"1" => {"bb2"=>20}, "8"=>{}},
+        "cc1" => {"cc2"=>30},
+      }
+      ok {dict["bb"]["8"]}.same?(d2)
+      ok {dict.keys} == ["aa1", "bb", "cc1"]
+    end
+
+    spec "[!4wdi7] ignores Symbol key (which represents regexp)." do
+      dict = {"aa1" => {"aa2"=>10}, :"bb1" => {"bb2"=>20}}
+      d2 = @router.instance_eval { _next_dict(dict, "bb1") }
+      ok {d2} == {}
+      ok {dict} == {
+        "aa1" => {"aa2"=>10},
+        :"bb1" => {"bb2"=>20},
+        "bb1" => {},
+      }
+      ok {dict["bb1"]}.same?(d2)
+    end
+
+    spec "[!66sdb] ignores nil key (which represents leaf node)." do
+      dict = {"aa1" => {"aa2" => 10}, nil => ["foo"]}
+      d2 = @router.instance_eval { _next_dict(dict, "mm1") }
+      ok {d2} == {}
+      ok {dict} == {"aa1" => {"aa2" => 10}, nil => ["foo"], "mm1" => {}}
+      ok {dict["mm1"]}.same?(d2)
+    end
+
+    case_when "[!46o9b] if existing key is same as common prefix..." do
+
+      spec "[!4ypls] not replace existing key." do
+        dict = {"aa1" => {"aa2" => 10}, "bb1" => {"bb2" => 20}}
+        aa1 = dict["aa1"]
+        d2 = @router.instance_eval { _next_dict(dict, "aa1mm2") }
+        ok {d2} == {}
+        ok {dict} == {
+          "aa1" => {"aa2" => 10, "mm2" => d2},
+          "bb1" => {"bb2" => 20},
+        }
+        ok {dict["aa1"]}.same?(aa1)
+      end
+
+    end
+
+    case_when "[!veq0q] if new key is same as common prefix..." do
+
+      spec "[!0tboh] replaces existing key with ney key." do
+        dict = {"aa1" => {"aa2" => 10}, "bb1" => {"bb2" => 20}}
+        aa1 = dict["aa1"]
+        d2 = @router.instance_eval { _next_dict(dict, "aa") }
+        ok {d2} == {"1" => {"aa2" => 10}}
+        ok {dict} == {
+          "aa" => {"1" => {"aa2" => 10}},
+          "bb1" => {"bb2" => 20},
+        }
+        ok {dict["aa"]["1"]}.same?(aa1)
+      end
+
+    end
+
+    case_when "[!esszs] if common prefix is a part of exsting key and new key..." do
+
+      spec "[!pesq0] replaces existing key with common prefix." do
+        dict = {"aa1" => {"aa2"=>10}, "bb1" => {"bb2"=>20}, "cc1" => {"cc2"=>30}}
+        bb1 = dict["bb1"]
+        d2 = @router.instance_eval { _next_dict(dict, "bb7") }
+        ok {d2} == {}
+        ok {dict} == {
+          "aa1" => {"aa2"=>10},
+          "bb"  => {"1" => {"bb2"=>20}, "7" => {}},
+          "cc1" => {"cc2"=>30},
+        }
+        ok {dict["bb"]["7"]}.same?(d2)
+      end
+
+    end
+
+    case_when "[!viovl] if new key has no common prefix with existing keys..." do
+
+      spec "[!i6smv] adds empty dict with new key." do
+        dict = {"aa1" => {"aa2"=>10}, "bb1" => {"bb2"=>20}, "cc1" => {"cc2"=>30}}
+        d2 = @router.instance_eval { _next_dict(dict, "mm1") }
+        ok {dict} == {
+          "aa1" => {"aa2"=>10},
+          "bb1" => {"bb2"=>20},
+          "cc1" => {"cc2"=>30},
+          "mm1" => {},
+        }
+        ok {dict["mm1"]}.same?(d2)
+      end
+
+    end
+
+  end
+
+
+  topic '#_common_prefix()' do
+
+    spec "[!1z2ii] returns common prefix and rest of strings." do
+      t = @router.instance_eval { _common_prefix("baar", "bazz") }
+      prefix, rest1, rest2 = t
+      ok {prefix} == "ba"
+      ok {rest1}  == "ar"
+      ok {rest2}  == "zz"
+    end
+
+    spec "[!86tsd] calculates common prefix of two strings." do
+      t = @router.instance_eval { _common_prefix("bar", "barkuz") }
+      prefix, rest1, rest2 = t
+      ok {prefix} == "bar"
+      ok {rest1}  == ""
+      ok {rest2}  == "kuz"
+      #
+      t = @router.instance_eval { _common_prefix("barrab", "bar") }
+      prefix, rest1, rest2 = t
+      ok {prefix} == "bar"
+      ok {rest1}  == "rab"
+      ok {rest2}  == ""
+    end
+
+  end
+
+
+  topic '#_param_patterns()' do
+
+    spec "[!j90mw] returns '[^./?]+' and '([^./?]+)' if param specified." do
+      x = nil
+      s1, s2 = @router.instance_eval { _param_patterns("id", nil) {|a| x = a } }
+      ok {s1} == '[^./?]+'
+      ok {s2} == '([^./?]+)'
+      ok {x} == "id"
+    end
+
+    spec "[!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'." do
+      x = nil
+      s1, s2 = @router.instance_eval { _param_patterns(nil, ".:format") {|a| x = a } }
+      ok {s1} == '(?:\.[^./?]+)?'
+      ok {s2} == '(?:\.([^./?]+))?'
+      ok {x} == "format"
+    end
+
+    spec "[!69yj9] optional string can contains other params." do
+      arr = []
+      s1, s2 = @router.instance_eval { _param_patterns(nil, ":yr-:mo-:dy") {|a| arr << a } }
+      ok {s1} == '(?:[^./?]+\-[^./?]+\-[^./?]+)?'
+      ok {s2} == '(?:([^./?]+)\-([^./?]+)\-([^./?]+))?'
+      ok {arr} == ["yr", "mo", "dy"]
+    end
+
+  end
+
+
+  topic '#param_pattern()' do
+
+    spec "[!6sd9b] converts regexp string according to param name." do
+      s = @router.instance_eval { param_pattern("id") }
+      ok {s} == '[^./?]+'
+      s = @router.instance_eval { param_pattern("user_id") }
+      ok {s} == '[^./?]+'
+      s = @router.instance_eval { param_pattern("username") }
+      ok {s} == '[^./?]+'
+    end
+
+  end
+
+
+  topic '#_build_rexp()' do
+
+    spec "[!65yw6] converts nested dict into regexp." do
+      dict = {
+        "/api/books/" => {
+          :"[^./?]+" => {
+            nil => [],
+            "/comments" => {
+              nil => [],
+              "/" => {
+                :"[^./?]+" => {
+                  nil => [],
+                },
+              },
+            },
+          },
+        },
+      }
+      x = @router.instance_eval { _build_rexp(dict) { } }
+      id = '[^./?]+'
+      ok {x} == %r`\A/api/books/#{id}(?:(\z)|/comments(?:(\z)|/#{id}(\z)))\z`
+    end
+
+    spec "[!hs7vl] '(?:)' and '|' are added only if necessary." do
+      dict = {
+        "/api/books/" => {
+          :"[^./?]+" => {
+            "/comments" => {
+              "/" => {
+                :"[^./?]+" => {
+                  nil => [],
+                },
+              },
+            },
+          },
+        },
+      }
+      x = @router.instance_eval { _build_rexp(dict) { } }
+      id = '[^./?]+'
+      ok {x} == %r`\A/api/books/#{id}/comments/#{id}(\z)\z`
+    end
+
+    spec "[!7v7yo] nil key means leaf node and yields block argument." do
+      dict = {
+        "/api/books/" => {
+          :"[^./?]+" => {
+            nil => [9820],
+            "/comments" => {
+              "/" => {
+                :"[^./?]+" => {
+                  nil => [1549],
+                },
+              },
+            },
+          },
+        },
+      }
+      actuals = []
+      x = @router.instance_eval { _build_rexp(dict) {|a| actuals << a } }
+      id = '[^./?]+'
+      ok {x} == %r`\A/api/books/#{id}(?:(\z)|/comments/#{id}(\z))\z`
+      ok {actuals} == [[9820], [1549]]
+    end
+
+    spec "[!hda6m] string key should be escaped." do
+      dict = {
+        "/api/books/" => {
+          :"[^./?]+" => {
+            ".json" => {
+              nil => [],
+            }
+          }
+        }
+      }
+      x = @router.instance_eval { _build_rexp(dict) { } }
+      id = '[^./?]+'
+      ok {x} == %r`\A/api/books/#{id}\.json(\z)\z`
+    end
+
+    spec "[!b9hxc] symbol key means regexp string." do
+      dict = {
+        "/api/books/" => {
+          :'\d+' => {
+            nil => [],
+          },
+        },
+      }
+      x = @router.instance_eval { _build_rexp(dict) { } }
+      ok {x} == %r`\A/api/books/\d+(\z)\z`
+    end
+
+  end
+
 
   topic '#range_of_urlpath_param()' do
 
@@ -96,283 +772,34 @@ topic Rack::JetRouter do
   end
 
 
-  topic '#compile_urlpath_pattern()' do
+  topic '#normalize_mapping_key()' do
 
-    spec "[!joozm] escapes metachars with backslash in text part." do
-      jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/foo.html')} == ['/foo\.html', nil]
-      end
-    end
-
-    spec "[!rpezs] converts '/books/:id' into '/books/([^./?]+)'." do
-      jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/books/:id')} == ['/books/([^./?]+)', ['id']]
-      end
-    end
-
-    spec "[!4dcsa] converts '/index(.:format)' into '/index(?:\.([^./?]+))?'." do
-      jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/index(.:format)')} == ['/index(?:\.([^./?]+))?', ['format']]
-      end
-    end
-
-    spec "[!1d5ya] rethrns compiled string and nil when no urlpath parameters nor parens." do
-      jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/index')} == ['/index', nil]
-      end
-    end
-
-    spec "[!of1zq] returns compiled string and urlpath param names when urlpath param or parens exist." do
-      jet_router.instance_exec(self) do |_|
-        _.ok {compile_urlpath_pattern('/books/:id')} == ['/books/([^./?]+)', ['id']]
-        _.ok {compile_urlpath_pattern('/books/:id(.:format)')} == ['/books/([^./?]+)(?:\.([^./?]+))?', ['id', 'format']]
-        _.ok {compile_urlpath_pattern('/index(.html)')} == ['/index(?:\.html)?', []]
-      end
-    end
-
-  end
-
-
-  topic '#compile_mapping()' do
-
-    spec "[!xzo7k] returns regexp, hash, and array." do
+    spec "[!r7cmk] converts keys into string." do
       mapping = [
-        ['/',              welcome_app],
-        ['/books/:id'    , book_show_api],
+        ['/books', {:GET=>book_list_api, :POST=>book_create_api}]
       ]
-      expected = '
-          \A
-              /books/[^./?]+(\z)
-          \z
-      '.gsub(/\s+/, '')
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {
-          '/'                => welcome_app,
-        }
-        _.ok {list} == [
-          [%r'\A/books/([^./?]+)\z',      ['id'], book_show_api, (7..-1)],
-        ]
+      Rack::JetRouter.new(mapping).instance_exec(self) do |_|
+        dict = @fixed_urlpath_dict
+        _.ok {dict['/books']} == {'GET'=>book_list_api, 'POST'=>book_create_api}
       end
     end
 
-    spec "[!iza1g] adds grouping if necessary." do
+    spec "[!z9kww] allows 'ANY' as request method." do
       mapping = [
-        ['/api', [
-          ['/books', [
-            ['/:id'        , book_show_api],
-          ]],
-        ]],
-        ['/admin', [
-          ['/books', [
-            ['/:id'        , admin_book_show_app],
-          ]],
-        ]],
+        ['/books', {'ANY'=>book_list_api, 'POST'=>book_create_api}]
       ]
-      expected = '
-          \A
-              (?:
-              /api
-                      /books
-                          /[^./?]+(\z)
-              |
-              /admin
-                      /books
-                          /[^./?]+(\z)
-              )
-          \z
-      '.gsub(/\s+/, '')
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {}
-        _.ok {list} == [
-          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
-          [%r'\A/admin/books/([^./?]+)\z',  ['id'], admin_book_show_app, (13..-1)],
-        ]
+      Rack::JetRouter.new(mapping).instance_exec(self) do |_|
+        dict = @fixed_urlpath_dict
+        _.ok {dict['/books']} == {'ANY'=>book_list_api, 'POST'=>book_create_api}
       end
     end
 
-    spec "[!pv2au] deletes unnecessary urlpath regexp." do
+    spec "[!k7sme] raises error when unknown request method specified." do
       mapping = [
-        ['/'               , welcome_app],
-        ['/api', [
-          ['/books', [
-            [''            , book_list_api],
-            ['/new'        , book_new_api],
-          ]],
-          ['/books2', [
-            ['/:id'        , book_show_api],
-          ]],
-        ]],
+        ['/books', {"UNLOCK"=>book_list_api}]
       ]
-      expected = '\A/api/books2/[^./?]+(\z)\z'
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {
-          '/'                => welcome_app,
-          '/api/books'       => book_list_api,
-          '/api/books/new'   => book_new_api,
-        }
-        _.ok {list} == [
-          [%r'\A/api/books2/([^./?]+)\z',  ['id'], book_show_api, (12..-1)],
-        ]
-      end
-    end
-
-    spec "[!bh9lo] deletes unnecessary grouping." do
-      mapping = [
-        ['/api', [
-          ['/books', [
-            ['/:id'        , book_show_api],
-          ]],
-        ]],
-      ]
-      expected = '
-          \A
-            /api
-              /books
-                /[^./?]+(\z)
-          \z
-      '.gsub(/\s+/, '')
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {}
-        _.ok {list} == [
-          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
-        ]
-      end
-    end
-
-    spec "[!l63vu] handles urlpath pattern as fixed when no urlpath params." do
-      mapping = [
-        ['/api/books'      , book_list_api],
-      ]
-      expected = '
-          \A
-          \z
-      '.gsub(/\s+/, '')
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {
-          '/api/books'       => book_list_api,
-        }
-        _.ok {list} == [
-        ]
-      end
-    end
-
-    spec "[!vfytw] handles urlpath pattern as variable when urlpath param exists." do
-      mapping = [
-        ['/api/books/:id'  , book_show_api],
-      ]
-      expected = '
-          \A
-              /api/books/[^./?]+(\z)
-          \z
-      '.gsub(/\s+/, '')
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {
-        }
-        _.ok {list} == [
-          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
-        ]
-      end
-    end
-
-    spec "[!2ktpf] handles end-point." do
-      mapping = [
-        ['/'               , welcome_app],
-        ['/api/books'      , book_list_api],
-        ['/api/books/:id'  , book_show_api],
-      ]
-      expected = '
-          \A
-              /api/books/[^./?]+(\z)
-          \z
-      '.gsub(/\s+/, '')
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {
-          '/'                => welcome_app,
-          '/api/books'       => book_list_api,
-        }
-        _.ok {list} == [
-          [%r'\A/api/books/([^./?]+)\z',  ['id'], book_show_api, (11..-1)],
-        ]
-      end
-    end
-
-    spec "[!ospaf] accepts nested mapping." do
-      mapping = [
-        ['/admin', [
-          ['/api', [
-            ['/books', [
-              ['',           book_list_api],
-              ['/:id',       book_show_api],
-            ]],
-          ]],
-        ]],
-      ]
-      expected = '
-          \A
-              /admin
-                  /api
-                      /books
-                          /[^./?]+(\z)
-          \z
-      '.gsub(/\s+/, '')
-      jet_router.instance_exec(self) do |_|
-        rexp, dict, list = compile_mapping(mapping)
-        _.ok {rexp} == Regexp.new(expected)
-        _.ok {dict} == {
-          '/admin/api/books'       => book_list_api,
-        }
-        _.ok {list} == [
-          [%r'\A/admin/api/books/([^./?]+)\z',  ['id'], book_show_api, (17..-1)],
-        ]
-      end
-    end
-
-    topic "[!guhdc] if mapping dict is specified..." do
-
-      spec "[!r7cmk] converts keys into string." do
-        mapping = [
-          ['/books', {:GET=>book_list_api, :POST=>book_create_api}]
-        ]
-        Rack::JetRouter.new([]).instance_exec(self) do |_|
-          rexp, dict, list = compile_mapping(mapping)
-          _.ok {dict['/books']} == {'GET'=>book_list_api, 'POST'=>book_create_api}
-        end
-      end
-
-      spec "[!z9kww] allows 'ANY' as request method." do
-        mapping = [
-          ['/books', {'ANY'=>book_list_api, 'POST'=>book_create_api}]
-        ]
-        Rack::JetRouter.new([]).instance_exec(self) do |_|
-          rexp, dict, list = compile_mapping(mapping)
-          _.ok {dict['/books']} == {'ANY'=>book_list_api, 'POST'=>book_create_api}
-        end
-      end
-
-      spec "[!k7sme] raises error when unknown request method specified." do
-        mapping = [
-          ['/books', {"UNLOCK"=>book_list_api}]
-        ]
-        Rack::JetRouter.new([]).instance_exec(self) do |_|
-          pr = proc { compile_mapping(mapping) }
-          _.ok {pr}.raise?(ArgumentError, '"UNLOCK": unknown request method.')
-        end
-      end
-
+      pr = proc { Rack::JetRouter.new(mapping) }
+      ok {pr}.raise?(ArgumentError, '"UNLOCK": unknown request method.')
     end
 
   end
@@ -440,25 +867,27 @@ topic Rack::JetRouter do
 
     spec "[!u2ff4] compiles urlpath mapping." do
       jet_router.instance_exec(self) do |_|
-        expected = '
+        id = '[^./?]+'
+        expected = "
             \A
             (?:
                 /api
                     (?:
                         /books
-                            (?:/[^./?]+(\z)|/[^./?]+/edit(\z))
+                            (?:/#{id}(\z)|/#{id}/edit(\z))
                     |
-                        /books/[^./?]+/comments
-                            (?:(\z)|/[^./?]+(\z))
+                        /books/#{id}/comments
+                            (?:(\z)|/#{id}(\z))
                     )
             |
                 /admin
                     /books
-                        /[^./?]+(\z)
+                        /#{id}(\z)
             )
             \z
-        '.gsub(/\s+/, '')
-        _.ok {@urlpath_rexp} == Regexp.new(expected)
+        ".gsub(/\s+/, '')
+        #_.ok {@urlpath_rexp} == Regexp.new(expected)
+        _.ok {@urlpath_rexp} == %r`\A/a(?:pi/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))|dmin/books/#{id}(\z))\z`
         _.ok {@fixed_urlpath_dict} == {
           '/'                => welcome_app,
           '/index.html'      => welcome_app,
@@ -478,6 +907,21 @@ topic Rack::JetRouter do
                                                       'PUT'    => admin_book_update_app,
                                                       'DELETE' => admin_book_delete_app}, (13..-1)],
         ]
+      end
+    end
+
+    spec "[!l63vu] handles urlpath pattern as fixed when no urlpath params." do
+      mapping = [
+        ['/api/books'      , book_list_api],
+      ]
+      router = Rack::JetRouter.new(mapping)
+      router.instance_exec(self) do |_|
+        dict = @fixed_urlpath_dict
+        list = @variable_urlpath_list
+        rexp = @urlpath_rexp
+        _.ok {dict} == {'/api/books' => book_list_api}
+        _.ok {list} == []
+        _.ok {rexp} == /\A\z/
       end
     end
 
