@@ -59,6 +59,10 @@ module Rack
 
     RELEASE = '$Release: 0.0.0 $'.split()[1]
 
+    #; [!haggu] contains available request methods.
+    REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
+                        .each_with_object({}) {|s, d| d[s] = s.intern }
+
 
     class Builder
 
@@ -471,7 +475,7 @@ module Rack
 
     public
 
-    def normalize_mapping_keys(dict)
+    def normalize_mapping_keys(dict)   # called from Builder class
       #; [!r7cmk] converts keys into string.
       #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
@@ -484,15 +488,11 @@ module Rack
       end
     end
 
-    def param_pattern(param)
+    def param_pattern(param)   # called from Builder class
       #; [!6sd9b] converts regexp string according to param name.
       #return '\d+' if param == "id" || param =~ /_id\z/
       return '[^./?]+'
     end
-
-    #; [!haggu] contains available request methods.
-    REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
-                        .each_with_object({}) {|s, d| d[s] = s.intern }
 
   end
 
