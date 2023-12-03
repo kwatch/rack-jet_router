@@ -296,7 +296,7 @@ Oktest.scope do
         mapping = [
           ['/api/books/:id', book_show_api],
         ]
-        r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
+        r = Rack::JetRouter.new(mapping, cache_size: 3)
         pair = r.lookup('/api/books/123')
         ok {pair} == [book_show_api, {"id"=>"123"}]
         r.instance_exec(self) do |_|
@@ -312,7 +312,7 @@ Oktest.scope do
         mapping = [
           ['/books/:id', book_show_api],
         ]
-        r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
+        r = Rack::JetRouter.new(mapping, cache_size: 3)
         #
         pair1 = r.lookup('/books/1'); ok {pair1} == [book_show_api, {"id"=>"1"}]
         pair2 = r.lookup('/books/2'); ok {pair2} == [book_show_api, {"id"=>"2"}]
@@ -339,7 +339,7 @@ Oktest.scope do
         mapping = [
           ['/books/:id', book_show_api],
         ]
-        r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
+        r = Rack::JetRouter.new(mapping, cache_size: 3)
         #
         pair1 = r.lookup('/books/1')
         pair2 = r.lookup('/books/2')

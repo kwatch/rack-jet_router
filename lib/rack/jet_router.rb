@@ -308,10 +308,10 @@ module Rack
     end
 
 
-    def initialize(mapping, urlpath_cache_size: 0,
+    def initialize(mapping, cache_size: 0,
                             enable_urlpath_param_range: true)
-      @urlpath_cache_size     = urlpath_cache_size
-      @variable_urlpath_cache = urlpath_cache_size > 0 ? {} : nil
+      @cache_size = cache_size
+      @variable_urlpath_cache = cache_size > 0 ? {} : nil
       ##
       ## Entry points without any path parameters.
       ## ex:
@@ -429,7 +429,7 @@ module Rack
       vars = build_urlpath_parameter_vars(param_names, param_values)
       #; [!84inr] caches result when variable urlpath cache enabled.
       if cache
-        cache.shift() if cache.length >= @urlpath_cache_size
+        cache.shift() if cache.length >= @cache_size
         cache[req_path] = [obj, vars]
       end
       return obj, vars
