@@ -74,7 +74,7 @@ module Rack
       def build_tree(mapping, &callback)
         block_given_p = block_given?()
         #; [!6oa05] builds nested hash object from mapping data.
-        tree = {}
+        tree = {}         # tree is a nested dict
         param_d = {}
         _traverse_mapping(mapping, "", mapping.class) do |path, item|
           #; [!j0pes] if item is a hash object, converts keys from symbol to string.
