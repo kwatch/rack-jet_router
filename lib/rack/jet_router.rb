@@ -321,7 +321,7 @@ module Rack
       ##     "/api/orders" => orders_app,
       ##   }
       ##
-      @fixed_urlpath_dict = {}
+      @fixed_entrypoint_dict = {}
       ##
       ## Pair list of path and Rack app.
       ## ex:
@@ -332,13 +332,13 @@ module Rack
       ##     ["/api/orders/:id" , order_app ],
       ##   ]
       ##
-      @all_entrypoints    = []
+      @all_entrypoint_list    = []
       #; [!u2ff4] compiles urlpath mapping.
       builder = Builder.new(self, enable_urlpath_param_range)
       tree = builder.build_tree(mapping) do |path, item, fixed_p|
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        @fixed_urlpath_dict[path] = item if fixed_p
-        @all_entrypoints << [path, item]
+        @fixed_entrypoint_dict[path] = item if fixed_p
+        @all_entrypoint_list << [path, item]
       end
       ##
       ## Entry points with one or more path parameters.
@@ -348,7 +348,7 @@ module Rack
       ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
       ##   ]
       ##
-      @variable_urlpath_list = tuples = []
+      @variable_entrypoint_list = tuples = []
       ##
       ## Combined regexp of variable urlpath patterns.
       ## ex:
@@ -402,7 +402,7 @@ module Rack
     def lookup(req_path)
       #; [!24khb] finds in fixed urlpaths at first.
       #; [!iwyzd] urlpath param value is nil when found in fixed urlpaths.
-      obj = @fixed_urlpath_dict[req_path]
+      obj = @fixed_entrypoint_dict[req_path]
       return obj, nil if obj
       #; [!upacd] finds in variable urlpath cache if it is enabled.
       #; [!1zx7t] variable urlpath cache is based on LRU.
@@ -417,7 +417,7 @@ module Rack
       index = m.captures.find_index('')
       return nil unless index
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj, range = @variable_urlpath_list[index]
+      full_urlpath_rexp, param_names, obj, range = @variable_entrypoint_list[index]
       if range
         ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
         str = req_path[range]
@@ -440,7 +440,7 @@ module Rack
     ## Yields pair of urlpath pattern and app.
     def each(&block)
       #; [!ep0pw] yields pair of urlpath pattern and app.
-      @all_entrypoints.each(&block)
+      @all_entrypoint_list.each(&block)
     end
 
     protected
