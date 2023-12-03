@@ -387,6 +387,15 @@ Oktest.scope do
         ]
       end
 
+      spec "[!sastr] prepares empty subrouter." do
+        dict = @router.instance_eval { @variable_endpoints }
+        ok {dict.keys()} == ["/api/books/", "/admin/book", ""]
+        subr = dict[""]
+        ok {subr}.is_a?(Rack::JetRouter::SubRouter)
+        ok {subr.compound_path_rexp} == /\A\z/
+        ok {subr.tuples} == []
+      end
+
     end
 
 

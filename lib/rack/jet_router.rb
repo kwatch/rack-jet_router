@@ -161,11 +161,10 @@ module Rack
       pairs.group_by {|path, _| path[@prefix_range] }.each do |prefix, pairs_|
         @variable_endpoints[prefix] = builder.build_subrouter(pairs_)
       end
+      #; [!sastr] prepares empty subrouter.
       @variable_endpoints[""] ||= builder.build_subrouter([])
       pairs.clear()
     end
-
-    attr_reader :urlpath_rexp
 
     ## Finds rack app according to PATH_INFO and REQUEST_METHOD and invokes it.
     def call(env)
