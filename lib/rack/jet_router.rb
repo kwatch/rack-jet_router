@@ -131,7 +131,6 @@ module Rack
       builder = Builder.new(self, _enable_range)
       param_rexp = /[:*]\w+|\(.*?\)/
       pairs = []    # ex: [["/api/books/:id", book_app], ["/api/orders/:id", order_app]]
-      min_index = 999
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
@@ -152,14 +151,12 @@ module Rack
             end
           end
           pairs << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
-          min_index = index if index < min_index
         else
           pairs << [path, item]
-          min_index = index if index < min_index
         end
       end
       #; [!u2ff4] compiles urlpath mapping and generates subrouters.
-      min_index = 0 if pairs.empty?
+      min_index = pairs.collect {|path, _| path =~ param_rexp }.min() || 0
       @prefix_range = (0...min_index)
       pairs.group_by {|path, _| path[@prefix_range] }.each do |prefix, pairs_|
         @variable_endpoints[prefix] = builder.build_subrouter(pairs_)
