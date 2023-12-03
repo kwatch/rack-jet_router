@@ -312,7 +312,6 @@ module Rack
                             enable_urlpath_param_range: true)
       @urlpath_cache_size     = urlpath_cache_size
       @variable_urlpath_cache = urlpath_cache_size > 0 ? {} : nil
-      @enable_urlpath_param_range = enable_urlpath_param_range
       ##
       ## Entry points without any path parameters.
       ## ex:
