@@ -199,18 +199,18 @@ module Rack
       if range
         ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
         str = req_path[range]
-        param_values = [str]
+        values = [str]
       else
         m = full_urlpath_rexp.match(req_path)
-        param_values = m.captures
+        values = m.captures
       end
-      vars = build_param_values(param_names, param_values)
+      param_values = build_param_values(param_names, values)
       #; [!84inr] caches result when variable urlpath cache enabled.
       if cache
         cache.shift() if cache.length >= @cache_size
-        cache[req_path] = [obj, vars]
+        cache[req_path] = [obj, param_values]
       end
-      return obj, vars
+      return obj, param_values
     end
 
     alias find lookup      # :nodoc:      # for backward compatilibity
