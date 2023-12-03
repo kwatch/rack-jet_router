@@ -58,7 +58,7 @@ Oktest.scope do
           ['/:id'       , {:GET=>admin_book_show_app, :PUT=>admin_book_update_app, :DELETE=>admin_book_delete_app}],
         ]],
       ]],
-      ['/static/*filepath', {:GET=>staticfile_app}],
+      ['/static/v1/*filepath', {:GET=>staticfile_app}],
     ]
 
     def new_env(req_method, req_path, opts={})
@@ -253,7 +253,7 @@ Oktest.scope do
              "PUT"    => admin_book_update_app,
              "DELETE" => admin_book_delete_app,
            }],
-          ["/static/*filepath", {
+          ["/static/v1/*filepath", {
              "GET"    => staticfile_app,
            }],
         ]
@@ -272,6 +272,39 @@ Oktest.scope do
             }
           }
         end
+      end
+
+      spec "[!u2ff4] compiles urlpath mapping and generates subrouters." do
+        @router.instance_exec(self) do |_|
+          id = '[^./?]+'
+          #
+          _.ok {@prefix_range} == (0...11)
+          _.ok {@variable_endpoints.keys()} == ["/api/books/", "/admin/book", "/static/v1/", ""]
+          _.ok {@variable_endpoints.keys()[0]}.length(11)
+          _.ok {@variable_endpoints.keys()[1]}.length(11)
+          #
+          subr1 = @variable_endpoints["/api/books/"]
+          _.ok {subr1}.is_a?(Rack::JetRouter::SubRouter)
+          _.ok {subr1.compound_path_rexp} == %r!\A/api/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))\z!
+          _.ok {subr1.tuples} == [
+            [%r'\A/api/books/([^./?]+)\z',      ['id'], book_show_api, (11..-1), nil],
+            [%r'\A/api/books/([^./?]+)/edit\z', ['id'], book_edit_api, (11..-6), nil],
+            [%r'\A/api/books/([^./?]+)/comments\z',          ['book_id'], comment_create_api, (11..-10), nil],
+            [%r'\A/api/books/([^./?]+)/comments/([^./?]+)\z', ['book_id', 'comment_id'], comment_update_api, (11..-1), '/comments/'],
+          ]
+          #
+          subr2 = @variable_endpoints["/admin/book"]
+          _.ok {subr2}.is_a?(Rack::JetRouter::SubRouter)
+          _.ok {subr2.compound_path_rexp} == %r!\A/admin/books/#{id}(\z)\z!
+          map = {
+            'GET'    => admin_book_show_app,
+            'PUT'    => admin_book_update_app,
+            'DELETE' => admin_book_delete_app,
+          }
+          _.ok {subr2.tuples} == [
+            [%r'\A/admin/books/([^./?]+)\z', ['id'], map, (13..-1), nil],
+          ]
+        end
         #
         mapping = [
           ['/api/books'      , book_list_api],
@@ -279,7 +312,7 @@ Oktest.scope do
         router = Rack::JetRouter.new(mapping)
         router.instance_exec(self) do |_|
           _.ok {@fixed_endpoints} == {'/api/books' => book_list_api}
-          _.ok {@variable_endpoints} == []
+          _.ok {@variable_endpoints.keys()} == [""]
         end
       end
 
@@ -294,7 +327,7 @@ Oktest.scope do
             "/api/books.html" => book_list_api,
             "/api/books.json" => book_list_api,
           }
-          _.ok {@variable_endpoints} == []
+          _.ok {@variable_endpoints.keys()} == [""]
         end
       end
 
@@ -309,37 +342,12 @@ Oktest.scope do
             "/api/books.json" => book_list_api,
             "/api/books.html" => book_list_api,
           }
-          _.ok {@variable_endpoints} == [
-            [%r!\A/api/books(?:\.([^./?]+))?\z!,
-             ["format"], book_list_api, nil, nil],
-          ]
-        end
-
-      end
-
-      spec "[!saa1a] compiles compound urlpath regexp." do
-        id = '[^./?]+'
-        z  = '(\z)'
-        expected = %r!\A/(?:a(?:pi/books/#{id}(?:#{z}|/(?:edit#{z}|comments(?:#{z}|/#{id}#{z})))|dmin/books/#{id}#{z})|static/.*(\z))\z!
-        ok {@router.urlpath_rexp} == expected
-      end
-
-      spec "[!f1d7s] builds variable endpoint list." do
-        id = '[^./?]+'
-        map2 = {
-          'GET'    => admin_book_show_app,
-          'PUT'    => admin_book_update_app,
-          'DELETE' => admin_book_delete_app,
-        }
-        @router.instance_exec(self) do |_|
-          _.ok {@variable_endpoints} == [
-            [%r'\A/api/books/(#{id})\z',      ['id'], book_show_api, (11..-1), nil],
-            [%r'\A/api/books/(#{id})/edit\z', ['id'], book_edit_api, (11..-6), nil],
-            [%r'\A/api/books/(#{id})/comments\z',         ['book_id'], comment_create_api, (11..-10), nil],
-            [%r'\A/api/books/(#{id})/comments/(#{id})\z', ['book_id', 'comment_id'], comment_update_api, (11..-1), '/comments/'],
-            [%r'\A/admin/books/(#{id})\z', ['id'], map2, (13..-1), nil],
-            [%r'\A/static/(.*)\z', ['filepath'], {"GET"=>staticfile_app}, (8..-1), nil],
-          ]
+          _.ok {@variable_endpoints.keys()} == ["/api/books", ""]
+          @variable_endpoints["/api/books"].instance_exec(_) do |_|
+            _.ok {@tuples} == [
+              [%r!\A/api/books(?:\.([^./?]+))?\z!, ["format"], book_list_api, nil, nil],
+            ]
+          end
         end
       end
 

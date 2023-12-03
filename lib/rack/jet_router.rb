@@ -114,29 +114,29 @@ module Rack
       ##
       @fixed_endpoints = {}
       ##
-      ## Endpoints with one or more path parameters.
+      ## Subrouters for endpoints with one or more path parameters.
       ## ex:
-      ##   [
-      ##     [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
-      ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
-      ##   ]
+      ##   {
+      ##     "/api/books/" => SubRouter.new(%r!\A/api/books/([^./?]+)!, [
+      ##         [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
+      ##       ]),
+      ##     "/api/orders" => SubRouter.new(%r!\A/api/orders/([^./?]+)!, [
+      ##         [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
+      ##       ]),
+      ##   }
       ##
-      @variable_endpoints = []
-      ##
-      ## Combined regexp of variable endpoints.
-      ## ex:
-      ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
-      ##
-      @urlpath_rexp = nil
+      @variable_endpoints = {}
       #
       #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, _enable_range)
       param_rexp = /[:*]\w+|\(.*?\)/
       tmplist = []
+      min_index = 999
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        if path !~ param_rexp
+        index = (path =~ param_rexp)
+        if ! index
           @fixed_endpoints[path] = item
         #; [!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths.
         #; [!ylyi0] stores '/foo' as fixed path when path pattern is '/foo(.:format)'.
@@ -152,18 +152,25 @@ module Rack
             end
           end
           tmplist << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
+          min_index = index if index < min_index
         else
           tmplist << [path, item]
+          min_index = index if index < min_index
         end
       end
-      #; [!saa1a] compiles compound urlpath regexp.
-      tree = builder.build_tree(tmplist)
-      @urlpath_rexp = builder.build_rexp(tree) do |tuple|
-        #; [!f1d7s] builds variable endpoint list.
-        @variable_endpoints << tuple
+      #; [!u2ff4] compiles urlpath mapping and generates subrouters.
+      min_index = 0 if tmplist.empty?
+      @prefix_range = (0...min_index)
+      tmpdict = {}
+      tmplist.each do |path, item|
+        prefix = path[@prefix_range]
+        (tmpdict[prefix] ||= []) << [path, item]
       end
-      #; [!u2ff4] compiles urlpath mapping.
-      @subrouter = SubRouter.new(@urlpath_rexp, @variable_endpoints)
+      tmpdict.each do |prefix, pairs|
+        @variable_endpoints[prefix] = builder.build_subrouter(pairs)
+      end
+      @variable_endpoints[""] ||= builder.build_subrouter([])
+      tmplist.clear(); tmpdict.clear()
     end
 
     attr_reader :urlpath_rexp
@@ -239,7 +246,9 @@ module Rack
     alias find lookup      # :nodoc:      # for backward compatilibity
 
     def _find(req_path)
-      return @subrouter.find(req_path)
+      prefix = req_path[@prefix_range]
+      subrouter = @variable_endpoints[prefix] || @variable_endpoints[""]
+      return subrouter.find(req_path)
     end
 
     ## Yields pair of urlpath pattern and app.
