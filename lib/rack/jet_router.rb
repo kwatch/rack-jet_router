@@ -162,6 +162,7 @@ module Rack
         #; [!f1d7s] builds variable endpoint list.
         @variable_endpoints << tuple
       end
+      #; [!u2ff4] compiles urlpath mapping.
       @subrouter = SubRouter.new(@urlpath_rexp, @variable_endpoints)
     end
 
