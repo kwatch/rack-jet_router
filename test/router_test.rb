@@ -64,13 +64,15 @@ topic Rack::JetRouter do
       ]],
     ]],
   ]
-  #
-  jet_router = Rack::JetRouter.new(whole_urlpath_mapping)
-  #
+
   def new_env(req_method, req_path, opts={})
     opts[:method] = req_method.to_s
     env = ::Rack::MockRequest.env_for(req_path, opts)
     return env
+  end
+
+  before do
+    @router = Rack::JetRouter.new(whole_urlpath_mapping)
   end
 
 
@@ -124,11 +126,11 @@ topic Rack::JetRouter do
   topic '#param_pattern()' do
 
     spec "[!6sd9b] converts regexp string according to param name." do
-      s = jet_router.instance_eval { param_pattern("id") }
+      s = @router.instance_eval { param_pattern("id") }
       ok {s} == '[^./?]+'
-      s = jet_router.instance_eval { param_pattern("user_id") }
+      s = @router.instance_eval { param_pattern("user_id") }
       ok {s} == '[^./?]+'
-      s = jet_router.instance_eval { param_pattern("username") }
+      s = @router.instance_eval { param_pattern("username") }
       ok {s} == '[^./?]+'
     end
 
@@ -138,7 +140,7 @@ topic Rack::JetRouter do
   topic '#should_redirect?' do
 
     spec "[!dsu34] returns false when request path is '/'." do
-      jet_router.instance_exec(self) do |_|
+      @router.instance_exec(self) do |_|
         _.ok {should_redirect?(_.new_env('GET'   , '/'))} == false
         _.ok {should_redirect?(_.new_env('POST'  , '/'))} == false
         _.ok {should_redirect?(_.new_env('PUT'   , '/'))} == false
@@ -149,14 +151,14 @@ topic Rack::JetRouter do
     end
 
     spec "[!ycpqj] returns true when request method is GET or HEAD." do
-      jet_router.instance_exec(self) do |_|
+      @router.instance_exec(self) do |_|
         _.ok {should_redirect?(_.new_env('GET'   , '/index'))} == true
         _.ok {should_redirect?(_.new_env('HEAD'  , '/index'))} == true
       end
     end
 
     spec "[!7q8xu] returns false when request method is POST, PUT or DELETE." do
-      jet_router.instance_exec(self) do |_|
+      @router.instance_exec(self) do |_|
         _.ok {should_redirect?(_.new_env('POST'  , '/index'))} == false
         _.ok {should_redirect?(_.new_env('PUT'   , '/index'))} == false
         _.ok {should_redirect?(_.new_env('DELETE', '/index'))} == false
@@ -172,7 +174,7 @@ topic Rack::JetRouter do
     spec "[!mlruv] returns 404 response." do
       expected = [404, {"Content-Type"=>"text/plain"}, ["404 Not Found"]]
       env = new_env('GET', '/xxx')
-      jet_router.instance_exec(self) do |_|
+      @router.instance_exec(self) do |_|
         _.ok {error_not_found(env)} == expected
       end
     end
@@ -185,7 +187,7 @@ topic Rack::JetRouter do
     spec "[!mjigf] returns 405 response." do
       expected = [405, {"Content-Type"=>"text/plain"}, ["405 Method Not Allowed"]]
       env = new_env('POST', '/')
-      jet_router.instance_exec(self) do |_|
+      @router.instance_exec(self) do |_|
         _.ok {error_not_allowed(env)} == expected
       end
     end
@@ -196,7 +198,7 @@ topic Rack::JetRouter do
   topic '#initialize()' do
 
     spec "[!u2ff4] compiles urlpath mapping." do
-      jet_router.instance_exec(self) do |_|
+      @router.instance_exec(self) do |_|
         id = '[^./?]+'
         expected = "
             \A
@@ -261,27 +263,27 @@ topic Rack::JetRouter do
   topic '#lookup()' do
 
     spec "[!ijqws] returns mapped object and urlpath parameter values when urlpath found." do
-      ret = jet_router.lookup('/api/books/123')
+      ret = @router.lookup('/api/books/123')
       ok {ret} == [book_show_api, {"id"=>"123"}]
     end
 
     spec "[!vpdzn] returns nil when urlpath not found." do
-      ok {jet_router.lookup('/api')}        == nil
-      ok {jet_router.lookup('/api/book')}   == nil
-      ok {jet_router.lookup('/api/books/')} == nil
+      ok {@router.lookup('/api')}        == nil
+      ok {@router.lookup('/api/book')}   == nil
+      ok {@router.lookup('/api/books/')} == nil
     end
 
     spec "[!24khb] finds in fixed urlpaths at first." do
-      ok {jet_router.lookup('/')}            == [welcome_app, nil]
-      ok {jet_router.lookup('/api/books')}   == [book_list_api, nil]
+      ok {@router.lookup('/')}            == [welcome_app, nil]
+      ok {@router.lookup('/api/books')}   == [book_list_api, nil]
       dict = {'GET'=>admin_book_list_app, 'POST'=>admin_book_create_app}
-      ok {jet_router.lookup('/admin/books')} == [dict, nil]
+      ok {@router.lookup('/admin/books')} == [dict, nil]
     end
 
     spec "[!iwyzd] urlpath param value is nil when found in fixed urlpaths." do
-      obj, vars = jet_router.lookup('/')
+      obj, vars = @router.lookup('/')
       ok {vars} == nil
-      obj, vars = jet_router.lookup('/api/books')
+      obj, vars = @router.lookup('/api/books')
       ok {vars} == nil
     end
 
@@ -371,23 +373,23 @@ topic Rack::JetRouter do
   topic '#call()' do
 
     spec "[!hse47] invokes app mapped to request urlpath." do
-      ok {jet_router.call(new_env(:GET, '/api/books/123'))}   == [200, {}, ["book_show_api"]]
-      ok {jet_router.call(new_env(:PUT, '/admin/books/123'))} == [200, {}, ["admin_book_update_app"]]
+      ok {@router.call(new_env(:GET, '/api/books/123'))}   == [200, {}, ["book_show_api"]]
+      ok {@router.call(new_env(:PUT, '/admin/books/123'))} == [200, {}, ["admin_book_update_app"]]
     end
 
     spec "[!fpw8x] finds mapped app according to env['PATH_INFO']." do
-      ok {jet_router.call(new_env(:GET, '/api/books'))}     == [200, {}, ["book_list_api"]]
-      ok {jet_router.call(new_env(:GET, '/api/books/123'))} == [200, {}, ["book_show_api"]]
+      ok {@router.call(new_env(:GET, '/api/books'))}     == [200, {}, ["book_list_api"]]
+      ok {@router.call(new_env(:GET, '/api/books/123'))} == [200, {}, ["book_show_api"]]
     end
 
     spec "[!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found." do
       headers = {"Content-Type"=>"text/plain", "Location"=>"/api/books"}
       content = "Redirect to /api/books"
-      ok {jet_router.call(new_env(:GET, '/api/books/'))}    == [301, headers, [content]]
+      ok {@router.call(new_env(:GET, '/api/books/'))}    == [301, headers, [content]]
       #
       headers = {"Content-Type"=>"text/plain", "Location"=>"/api/books/78"}
       content = "Redirect to /api/books/78"
-      ok {jet_router.call(new_env(:GET, '/api/books/78/'))} == [301, headers, [content]]
+      ok {@router.call(new_env(:GET, '/api/books/78/'))} == [301, headers, [content]]
     end
 
     spec "[!3vsua] doesn't redict automatically when request path is '/'." do
@@ -399,34 +401,34 @@ topic Rack::JetRouter do
       headers = {"Content-Type"=>"text/plain", "Location"=>"/api/books?x=1&y=2"}
       content = "Redirect to /api/books?x=1&y=2"
       env = new_env(:GET, '/api/books/', {"QUERY_STRING"=>"x=1&y=2"})
-      ok {jet_router.call(env)} == [301, headers, [content]]
+      ok {@router.call(env)} == [301, headers, [content]]
     end
 
     spec "[!30x0k] returns 404 when request urlpath not found." do
       expected = [404, {"Content-Type"=>"text/plain"}, ["404 Not Found"]]
-      ok {jet_router.call(new_env(:GET, '/xxx'))} == expected
-      ok {jet_router.call(new_env(:GET, '/api/book'))} == expected
+      ok {@router.call(new_env(:GET, '/xxx'))} == expected
+      ok {@router.call(new_env(:GET, '/api/book'))} == expected
     end
 
     topic "[!gclbs] if mapped object is a Hash..." do
 
       spec "[!p1fzn] invokes app mapped to request method." do
-        ok {jet_router.call(new_env(:GET,    '/admin/books'))}     == [200, {}, ["admin_book_list_app"]]
-        ok {jet_router.call(new_env(:POST,   '/admin/books'))}     == [200, {}, ["admin_book_create_app"]]
-        ok {jet_router.call(new_env(:GET,    '/admin/books/123'))} == [200, {}, ["admin_book_show_app"]]
-        ok {jet_router.call(new_env(:PUT,    '/admin/books/123'))} == [200, {}, ["admin_book_update_app"]]
-        ok {jet_router.call(new_env(:DELETE, '/admin/books/123'))} == [200, {}, ["admin_book_delete_app"]]
+        ok {@router.call(new_env(:GET,    '/admin/books'))}     == [200, {}, ["admin_book_list_app"]]
+        ok {@router.call(new_env(:POST,   '/admin/books'))}     == [200, {}, ["admin_book_create_app"]]
+        ok {@router.call(new_env(:GET,    '/admin/books/123'))} == [200, {}, ["admin_book_show_app"]]
+        ok {@router.call(new_env(:PUT,    '/admin/books/123'))} == [200, {}, ["admin_book_update_app"]]
+        ok {@router.call(new_env(:DELETE, '/admin/books/123'))} == [200, {}, ["admin_book_delete_app"]]
       end
 
       spec "[!5m64a] returns 405 when request method is not allowed." do
         expected = [405, {"Content-Type"=>"text/plain"}, ["405 Method Not Allowed"]]
-        ok {jet_router.call(new_env(:PUT,    '/admin/books'))} == expected
-        ok {jet_router.call(new_env(:FOOBAR, '/admin/books'))} == expected
+        ok {@router.call(new_env(:PUT,    '/admin/books'))} == expected
+        ok {@router.call(new_env(:FOOBAR, '/admin/books'))} == expected
       end
 
       spec "[!ys1e2] uses GET method when HEAD is not mapped." do
-        ok {jet_router.call(new_env(:HEAD,    '/admin/books'))}     == [200, {}, ["admin_book_list_app"]]
-        ok {jet_router.call(new_env(:HEAD,    '/admin/books/123'))} == [200, {}, ["admin_book_show_app"]]
+        ok {@router.call(new_env(:HEAD,    '/admin/books'))}     == [200, {}, ["admin_book_list_app"]]
+        ok {@router.call(new_env(:HEAD,    '/admin/books/123'))} == [200, {}, ["admin_book_show_app"]]
       end
 
       spec "[!2hx6j] try ANY method when request method is not mapped." do
@@ -445,20 +447,20 @@ topic Rack::JetRouter do
 
     spec "[!2c32f] stores urlpath parameters as env['rack.urlpath_params']." do
       env = new_env(:GET,    '/api/books')
-      jet_router.call(env)
+      @router.call(env)
       ok {env['rack.urlpath_params']} == nil
       env = new_env(:GET,    '/api/books/123')
-      jet_router.call(env)
+      @router.call(env)
       ok {env['rack.urlpath_params']} == {"id"=>"123"}
       env = new_env(:GET,    '/api/books/123/comments/999')
-      jet_router.call(env)
+      @router.call(env)
       ok {env['rack.urlpath_params']} == {"book_id"=>"123", "comment_id"=>"999"}
       #
       env = new_env(:GET,    '/admin/books')
-      jet_router.call(env)
+      @router.call(env)
       ok {env['rack.urlpath_params']} == nil
       env = new_env(:GET,    '/admin/books/123')
-      jet_router.call(env)
+      @router.call(env)
       ok {env['rack.urlpath_params']} == {"id"=>"123"}
     end
 
@@ -469,7 +471,7 @@ topic Rack::JetRouter do
 
     spec "[!ep0pw] yields pair of urlpath pattern and app." do
       arr = []
-      jet_router.each do |upath, app|
+      @router.each do |upath, app|
         arr << [upath, app]
       end
       ok {arr[0]} == ["/", welcome_app]
