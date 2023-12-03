@@ -300,9 +300,9 @@ Oktest.scope do
         pair = r.lookup('/api/books/123')
         ok {pair} == [book_show_api, {"id"=>"123"}]
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {'/api/books/123'=>pair}
+          _.ok {@cache_dict} == {'/api/books/123'=>pair}
           #
-          @variable_urlpath_cache['/api/books/999'] = [book_list_api, {"ID"=>"111"}]
+          @cache_dict['/api/books/999'] = [book_list_api, {"ID"=>"111"}]
         end
         pair = r.lookup('/api/books/999')
         ok {pair} == [book_list_api, {"ID"=>"111"}]
@@ -318,7 +318,7 @@ Oktest.scope do
         pair2 = r.lookup('/books/2'); ok {pair2} == [book_show_api, {"id"=>"2"}]
         pair3 = r.lookup('/books/3'); ok {pair3} == [book_show_api, {"id"=>"3"}]
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/1'=>pair1,
             '/books/2'=>pair2,
             '/books/3'=>pair3,
@@ -327,7 +327,7 @@ Oktest.scope do
         #
         pair4 = r.lookup('/books/4'); ok {pair4} == [book_show_api, {"id"=>"4"}]
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/2'=>pair2,
             '/books/3'=>pair3,
             '/books/4'=>pair4,
@@ -346,7 +346,7 @@ Oktest.scope do
         pair3 = r.lookup('/books/3')
         pair4 = r.lookup('/books/4')
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/2'=>pair2,
             '/books/3'=>pair3,
             '/books/4'=>pair4,
@@ -355,7 +355,7 @@ Oktest.scope do
         #
         ok {r.lookup('/books/3')} == pair3
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/2'=>pair2,
             '/books/4'=>pair4,
             '/books/3'=>pair3,
@@ -364,7 +364,7 @@ Oktest.scope do
         #
         ok {r.lookup('/books/1')} == pair1
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/4'=>pair4,
             '/books/3'=>pair3,
             '/books/1'=>pair1,

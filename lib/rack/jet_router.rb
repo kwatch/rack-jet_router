@@ -311,7 +311,7 @@ module Rack
     def initialize(mapping, cache_size: 0,
                             enable_urlpath_param_range: true)
       @cache_size = cache_size
-      @variable_urlpath_cache = cache_size > 0 ? {} : nil
+      @cache_dict = cache_size > 0 ? {} : nil
       ##
       ## Entry points without any path parameters.
       ## ex:
@@ -406,7 +406,7 @@ module Rack
       return obj, nil if obj
       #; [!upacd] finds in variable urlpath cache if it is enabled.
       #; [!1zx7t] variable urlpath cache is based on LRU.
-      cache = @variable_urlpath_cache
+      cache = @cache_dict
       if cache && (pair = cache.delete(req_path))
         cache[req_path] = pair
         return pair
