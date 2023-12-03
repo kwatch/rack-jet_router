@@ -38,6 +38,18 @@ Oktest.scope do
     end
 
 
+    topic '#build_subrouter()' do
+
+      spec "[!zgcqg] creates SubRouter object." do
+        r = @builder.build_subrouter([])
+        ok {r}.is_a?(Rack::JetRouter::SubRouter)
+        ok {r.compound_path_rexp} == /\A\z/
+        ok {r.tuples} == []
+      end
+
+    end
+
+
     topic '#build_tree()' do
 
       spec "[!6oa05] builds nested hash object from mapping data." do

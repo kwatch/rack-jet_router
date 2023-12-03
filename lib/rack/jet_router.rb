@@ -409,6 +409,14 @@ module Rack
 
       public
 
+      def build_subrouter(pairs)
+        #; [!zgcqg] creates SubRouter object.
+        tree = build_tree(pairs)
+        tuples = []
+        urlpath_rexp = build_rexp(tree) {|tuple| tuples << tuple }
+        return SubRouter.new(urlpath_rexp, tuples)
+      end
+
       def build_tree(entrypoint_pairs)
         #; [!6oa05] builds nested hash object from mapping data.
         tree = {}         # tree is a nested dict
