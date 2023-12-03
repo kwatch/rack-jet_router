@@ -329,6 +329,35 @@ module Rack
         @enable_range = enable_range
       end
 
+      def traverse_mapping(mapping, &block)
+        _traverse_mapping(mapping, "", mapping.class, &block)
+      end
+
+      private
+
+      def _traverse_mapping(mapping, base_path, mapping_class, &block)
+        #; [!9s3f0] supports both nested list mapping and nested dict mapping.
+        mapping.each do |sub_path, item|
+          full_path = base_path + sub_path
+          #; [!2ntnk] nested dict mapping can have subclass of Hash as handlers.
+          if item.class == mapping_class
+            #; [!dj0sh] traverses mapping recursively.
+            _traverse_mapping(item, full_path, mapping_class, &block)
+          else
+            #; [!j0pes] if item is a hash object, converts keys from symbol to string.
+            item = _normalize_method_mapping(item) if item.is_a?(Hash)
+            #; [!brhcs] yields block for each full path and handler.
+            yield full_path, item
+          end
+        end
+      end
+
+      def _normalize_method_mapping(dict)
+        return @router.normalize_method_mapping(dict)
+      end
+
+      public
+
       def build_tree(entrypoint_pairs)
         #; [!6oa05] builds nested hash object from mapping data.
         tree = {}         # tree is a nested dict
@@ -371,28 +400,7 @@ module Rack
         return tree
       end
 
-      def traverse_mapping(mapping, &block)
-        _traverse_mapping(mapping, "", mapping.class, &block)
-      end
-
       private
-
-      def _traverse_mapping(mapping, base_path, mapping_class, &block)
-        #; [!9s3f0] supports both nested list mapping and nested dict mapping.
-        mapping.each do |sub_path, item|
-          full_path = base_path + sub_path
-          #; [!2ntnk] nested dict mapping can have subclass of Hash as handlers.
-          if item.class == mapping_class
-            #; [!dj0sh] traverses mapping recursively.
-            _traverse_mapping(item, full_path, mapping_class, &block)
-          else
-            #; [!j0pes] if item is a hash object, converts keys from symbol to string.
-            item = _normalize_method_mapping(item) if item.is_a?(Hash)
-            #; [!brhcs] yields block for each full path and handler.
-            yield full_path, item
-          end
-        end
-      end
 
       def _next_dict(d, str)
         #; [!s1rzs] if new key exists in dict...
@@ -494,6 +502,8 @@ module Rack
         return @router.param2rexp(param)    # ex: '[^./?]+'
       end
 
+      public
+
       def build_rexp(tree, &callback)
         #; [!65yw6] converts nested dict into regexp.
         sb = ['\A']
@@ -501,7 +511,8 @@ module Rack
         sb << '\z'
         return Regexp.compile(sb.join())
       end
-      public :build_rexp
+
+      private
 
       def _build_rexp(nested_dict, sb, &b)
         #; [!hs7vl] '(?:)' and '|' are added only if necessary.
@@ -529,10 +540,6 @@ module Rack
         arr = urlpath_pattern.split(rexp, -1)          # ex: ['/books/', '/edit']
         return nil unless arr.length == 2
         return (arr[0].length .. -(arr[1].length+1))   # ex: 7..-6  (Range object)
-      end
-
-      def _normalize_method_mapping(dict)
-        return @router.normalize_method_mapping(dict)
       end
 
     end
