@@ -192,7 +192,7 @@ module Rack
       #; [!vpdzn] returns nil when urlpath not found.
       m = @urlpath_rexp.match(req_path)
       return nil unless m
-      index = m.captures.find_index('')
+      index = m.captures.index('')
       return nil unless index
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
       full_urlpath_rexp, param_names, obj, range = @variable_endpoints[index]
