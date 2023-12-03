@@ -141,13 +141,13 @@ module Rack
     def call(env)
       #; [!fpw8x] finds mapped app according to env['PATH_INFO'].
       req_path = env['PATH_INFO']
-      app, param_values = lookup(req_path)
+      obj, param_values = lookup(req_path)
       #; [!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found.
       #; [!3vsua] doesn't redict automatically when request path is '/'.
-      if ! app && should_redirect?(env)
-        location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
-        app, param_values = lookup(location)
-        if app
+      if ! obj && should_redirect?(env)
+        location = req_path.end_with?("/") ? req_path[0..-2] : req_path + "/"
+        obj, param_values = lookup(location)
+        if obj
           #; [!hyk62] adds QUERY_STRING to redirect location.
           qs = env['QUERY_STRING']
           location = "#{location}?#{qs}" if qs && ! qs.empty?
@@ -155,17 +155,19 @@ module Rack
         end
       end
       #; [!30x0k] returns 404 when request urlpath not found.
-      return error_not_found(env) unless app
+      return error_not_found(env) unless obj
       #; [!gclbs] if mapped object is a Hash...
-      if app.is_a?(Hash)
+      if obj.is_a?(Hash)
         #; [!p1fzn] invokes app mapped to request method.
         #; [!5m64a] returns 405 when request method is not allowed.
         #; [!ys1e2] uses GET method when HEAD is not mapped.
         #; [!2hx6j] try ANY method when request method is not mapped.
-        dict = app
+        dict = obj
         req_meth = env['REQUEST_METHOD']
         app = dict[req_meth] || (req_meth == 'HEAD' ? dict['GET'] : nil) || dict['ANY']
         return error_not_allowed(env) unless app
+      else
+        app = obj
       end
       #; [!2c32f] stores urlpath parameter values into env['rack.urlpath_params'].
       store_param_values(env, param_values)
