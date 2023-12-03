@@ -479,8 +479,11 @@ module Rack
       #; [!r7cmk] converts keys into string.
       #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
+      #; [!itfsd] returns new Hash object.
+      #; [!gd08f] if arg is an instance of Hash subclass, returns new instance of it.
       request_methods = REQUEST_METHODS
-      newdict = {}
+      #newdict = {}
+      newdict = dict.class.new
       dict.each do |meth_sym, app|
         meth_str = meth_sym.to_s
         request_methods[meth_str] || meth_str == 'ANY'  or
