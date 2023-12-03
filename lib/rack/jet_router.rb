@@ -104,7 +104,7 @@ module Rack
           #; [!j0pes] if item is a hash object, converts keys from symbol to string.
           item = _normalize_mapping_keys(item) if item.is_a?(Hash)
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
-          variable_p = (path =~ /:\w|\(.*?\)/)
+          variable_p = !! (path =~ /:\w|\(.*?\)/)
           if variable_p
             d = tree
             sb = ['\A']
@@ -141,8 +141,7 @@ module Rack
             d[nil] = [Regexp.compile(sb.join()), params, item, range]
           end
           #; [!gls5k] yields callback if given.
-          fixed_p = ! variable_p
-          yield path, item, fixed_p if block_given_p
+          yield path, item, variable_p if block_given_p
         end
         return tree
       end
@@ -334,8 +333,9 @@ module Rack
       @all_endpoints = []
       #; [!u2ff4] compiles urlpath mapping.
       builder = Builder.new(self, enable_range)
-      tree = builder.build_tree(mapping) do |path, item, fixed_p|
+      tree = builder.build_tree(mapping) do |path, item, variable_p|
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        fixed_p = ! variable_p
         @fixed_endpoints[path] = item if fixed_p
         @all_endpoints << [path, item]
       end

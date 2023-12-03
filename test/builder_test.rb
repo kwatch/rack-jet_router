@@ -124,8 +124,8 @@ Oktest.scope do
         }
         id = '[^./?]+'
         ok {actuals} == [
-          ["/api/books/new", true],
-          ["/api/books/:id", false],
+          ["/api/books/new", false],
+          ["/api/books/:id", true],
         ]
       end
 
@@ -271,8 +271,8 @@ Oktest.scope do
         dict = @builder.build_tree(mapping) {|*args| actuals << args }
         id = '[^./?]+'
         ok {actuals} == [
-          ["/api/books/new", book_new_api , true],
-          ["/api/books/:id", book_show_api, false],
+          ["/api/books/new", book_new_api , false],
+          ["/api/books/:id", book_show_api, true],
         ]
       end
 
