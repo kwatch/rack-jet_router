@@ -69,11 +69,11 @@ Oktest.scope do
     end
 
 
-    topic '#normalize_mapping_key()' do
+    topic '#normalize_method_mapping()' do
 
       spec "[!r7cmk] converts keys into string." do
         d1 = {GET: book_list_api, POST: book_create_api}
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2} == {"GET"=>book_list_api, "POST"=>book_create_api}
         #
         mapping = [
@@ -87,7 +87,7 @@ Oktest.scope do
 
       spec "[!z9kww] allows 'ANY' as request method." do
         d1 = {ANY: book_list_api, POST: book_create_api}
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2} == {"ANY"=>book_list_api, "POST"=>book_create_api}
         #
         mapping = [
@@ -101,7 +101,7 @@ Oktest.scope do
 
       spec "[!k7sme] raises error when unknown request method specified." do
         d1 = {LOCK: book_list_api}
-        pr = proc { @router.normalize_mapping_keys(d1) }
+        pr = proc { @router.normalize_method_mapping(d1) }
         ok {pr}.raise?(ArgumentError, 'LOCK: unknown request method.')
         #
         mapping = [
@@ -113,14 +113,14 @@ Oktest.scope do
 
       spec "[!itfsd] returns new Hash object." do
         d1 = {"GET" => book_list_api}
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2} == d1
         ok {d2}.NOT.same?(d1)
       end
 
       spec "[!gd08f] if arg is an instance of Hash subclass, returns new instance of it." do
         d1 = Map(GET: book_list_api)
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2}.is_a?(Map)
         ok {d2} == Map.new.update({"GET"=>book_list_api})
       end

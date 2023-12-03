@@ -280,7 +280,7 @@ module Rack
 
     public
 
-    def normalize_mapping_keys(dict)   # called from Builder class
+    def normalize_method_mapping(dict)   # called from Builder class
       #; [!r7cmk] converts keys into string.
       #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
@@ -328,7 +328,7 @@ module Rack
         param_d = {}
         _traverse_mapping(mapping, "", mapping.class) do |path, item|
           #; [!j0pes] if item is a hash object, converts keys from symbol to string.
-          item = _normalize_mapping_keys(item) if item.is_a?(Hash)
+          item = _normalize_method_mapping(item) if item.is_a?(Hash)
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
           has_param = (path =~ /:\w|\(.*?\)/)
           if has_param
@@ -526,8 +526,8 @@ module Rack
         return (arr[0].length .. -(arr[1].length+1))   # ex: 7..-6  (Range object)
       end
 
-      def _normalize_mapping_keys(dict)
-        return @router.normalize_mapping_keys(dict)
+      def _normalize_method_mapping(dict)
+        return @router.normalize_method_mapping(dict)
       end
 
     end
