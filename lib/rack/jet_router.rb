@@ -129,11 +129,13 @@ module Rack
       #
       #; [!u2ff4] compiles urlpath mapping.
       builder = Builder.new(self, enable_range)
-      tree = builder.build_tree(mapping) do |path, item, has_param|
-        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        @fixed_endpoints[path] = item unless has_param
+      builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
+        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        has_param = (path =~ /:\w+|\(.*?\)/)
+        @fixed_endpoints[path] = item unless has_param
       end
+      tree = builder.build_tree(mapping)
       tuples = @variable_endpoints
       @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
     end
@@ -326,8 +328,7 @@ module Rack
         @enable_range = enable_range
       end
 
-      def build_tree(mapping, &callback)
-        block_given_p = block_given?()
+      def build_tree(mapping)
         #; [!6oa05] builds nested hash object from mapping data.
         tree = {}         # tree is a nested dict
         param_d = {}
@@ -369,8 +370,6 @@ module Rack
             #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
             d[nil] = [Regexp.compile(sb.join()), params, item, range]
           end
-          #; [!gls5k] yields callback if given.
-          yield path, item, !! has_param if block_given_p
         end
         return tree
       end

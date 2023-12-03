@@ -90,15 +90,9 @@ Oktest.scope do
             ]],
           ]],
         ]
-        actuals = []
-        dict = @builder.build_tree(mapping) {|path, _, fixed_p|
-          actuals << [path, fixed_p]
-        }
-        id = '[^./?]+'
-        ok {actuals} == [
-          ["/api/books/new", false],
-          ["/api/books/:id", true],
-        ]
+        dict = @builder.build_tree(mapping)
+        ok {dict.keys()} == ["/api/books/"]
+        ok {dict["/api/books/"].keys()} == [:"[^./?]+"]
       end
 
       spec "[!uyupj] handles urlpath parameter such as ':id'." do
@@ -228,24 +222,6 @@ Oktest.scope do
             },
           },
         }
-      end
-
-      spec "[!gls5k] yields callback if given." do
-        mapping = [
-          ['/api', [
-            ['/books', [
-              ['/new'       , book_new_api],
-              ['/:id'       , book_show_api],
-            ]],
-          ]],
-        ]
-        actuals = []
-        dict = @builder.build_tree(mapping) {|*args| actuals << args }
-        id = '[^./?]+'
-        ok {actuals} == [
-          ["/api/books/new", book_new_api , false],
-          ["/api/books/:id", book_show_api, true],
-        ]
       end
 
     end
