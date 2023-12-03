@@ -351,6 +351,42 @@ Oktest.scope do
         end
       end
 
+      spec "[!qgdm4] calculates prefix range." do
+        range = @router.instance_eval { @prefix_range }
+        dict  = @router.instance_eval { @variable_endpoints }
+        ok {range} == (0...11)
+        ok {dict.keys()} == ["/api/books/", "/admin/book", ""]
+        ok {dict.keys()[0]}.length(11)
+        ok {dict.keys()[1]}.length(11)
+      end
+
+      spec "[!m449g] generates subrouters per prefix." do
+        id = '[^./?]+'
+        dict = @router.instance_eval { @variable_endpoints }
+        ok {dict.keys()} == ["/api/books/", "/admin/book", ""]
+        subr1 = dict["/api/books/"]
+        ok {subr1}.is_a?(Rack::JetRouter::SubRouter)
+        ok {subr1.compound_path_rexp} == %r!\A/api/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))\z!
+        ok {subr1.tuples} == [
+          [%r'\A/api/books/([^./?]+)\z',      ['id'], book_show_api, (11..-1), nil],
+          [%r'\A/api/books/([^./?]+)/edit\z', ['id'], book_edit_api, (11..-6), nil],
+          [%r'\A/api/books/([^./?]+)/comments\z',          ['book_id'], comment_create_api, (11..-10), nil],
+          [%r'\A/api/books/([^./?]+)/comments/([^./?]+)\z', ['book_id', 'comment_id'], comment_update_api, (11..-1), '/comments/'],
+        ]
+        #
+        subr2 = dict["/admin/book"]
+        ok {subr2}.is_a?(Rack::JetRouter::SubRouter)
+        ok {subr2.compound_path_rexp} == %r!\A/admin/books/#{id}(\z)\z!
+        map = {
+          'GET'    => admin_book_show_app,
+          'PUT'    => admin_book_update_app,
+          'DELETE' => admin_book_delete_app,
+        }
+        ok {subr2.tuples} == [
+          [%r'\A/admin/books/([^./?]+)\z', ['id'], map, (13..-1), nil],
+        ]
+      end
+
     end
 
 
