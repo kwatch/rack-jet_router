@@ -135,7 +135,7 @@ module Rack
         has_param = (path =~ /:\w+|\(.*?\)/)
         @fixed_endpoints[path] = item unless has_param
       end
-      tree = builder.build_tree(mapping)
+      tree = builder.build_tree(@all_endpoints)
       tuples = @variable_endpoints
       @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
     end
@@ -328,11 +328,11 @@ module Rack
         @enable_range = enable_range
       end
 
-      def build_tree(mapping)
+      def build_tree(entrypoint_pairs)
         #; [!6oa05] builds nested hash object from mapping data.
         tree = {}         # tree is a nested dict
         param_d = {}
-        _traverse_mapping(mapping, "", mapping.class) do |path, item|
+        entrypoint_pairs.each do |path, item|
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
           has_param = (path =~ /:\w|\(.*?\)/)
           if has_param
