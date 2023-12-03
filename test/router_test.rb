@@ -91,10 +91,10 @@ topic Rack::JetRouter do
 
     spec "[!k7sme] raises error when unknown request method specified." do
       mapping = [
-        ['/books', {"UNLOCK"=>book_list_api}]
+        ['/books', {UNLOCK: book_list_api}]
       ]
       pr = proc { Rack::JetRouter.new(mapping) }
-      ok {pr}.raise?(ArgumentError, '"UNLOCK": unknown request method.')
+      ok {pr}.raise?(ArgumentError, 'UNLOCK: unknown request method.')
     end
 
   end

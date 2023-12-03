@@ -484,7 +484,7 @@ module Rack
       dict.each do |meth_sym, app|
         meth_str = meth_sym.to_s
         request_methods[meth_str] || meth_str == 'ANY'  or
-          raise ArgumentError.new("#{meth_sym.inspect}: unknown request method.")
+          raise ArgumentError.new("#{meth_sym}: unknown request method.")
         newdict[meth_str] = app
       end
       return newdict
