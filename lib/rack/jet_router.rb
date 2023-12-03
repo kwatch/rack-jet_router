@@ -141,13 +141,13 @@ module Rack
     def call(env)
       #; [!fpw8x] finds mapped app according to env['PATH_INFO'].
       req_path = env['PATH_INFO']
-      app, urlpath_params = lookup(req_path)
+      obj, param_values = lookup(req_path)
       #; [!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found.
       #; [!3vsua] doesn't redict automatically when request path is '/'.
-      if ! app && should_redirect?(env)
-        location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
-        app, urlpath_params = lookup(location)
-        if app
+      if ! obj && should_redirect?(env)
+        location = req_path.end_with?("/") ? req_path[0..-2] : req_path + "/"
+        obj, param_values = lookup(location)
+        if obj
           #; [!hyk62] adds QUERY_STRING to redirect location.
           qs = env['QUERY_STRING']
           location = "#{location}?#{qs}" if qs && ! qs.empty?
@@ -155,20 +155,22 @@ module Rack
         end
       end
       #; [!30x0k] returns 404 when request urlpath not found.
-      return error_not_found(env) unless app
+      return error_not_found(env) unless obj
       #; [!gclbs] if mapped object is a Hash...
-      if app.is_a?(Hash)
+      if obj.is_a?(Hash)
         #; [!p1fzn] invokes app mapped to request method.
         #; [!5m64a] returns 405 when request method is not allowed.
         #; [!ys1e2] uses GET method when HEAD is not mapped.
         #; [!2hx6j] try ANY method when request method is not mapped.
-        dict = app
+        dict = obj
         req_meth = env['REQUEST_METHOD']
         app = dict[req_meth] || (req_meth == 'HEAD' ? dict['GET'] : nil) || dict['ANY']
         return error_not_allowed(env) unless app
+      else
+        app = obj
       end
-      #; [!2c32f] stores urlpath parameters as env['rack.urlpath_params'].
-      store_urlpath_params(env, urlpath_params)
+      #; [!2c32f] stores urlpath parameter values into env['rack.urlpath_params'].
+      store_param_values(env, param_values)
       #; [!hse47] invokes app mapped to request urlpath.
       return app.call(env)   # make body empty when HEAD?
     end
@@ -192,25 +194,25 @@ module Rack
       #; [!vpdzn] returns nil when urlpath not found.
       m = @urlpath_rexp.match(req_path)
       return nil unless m
-      index = m.captures.find_index('')
+      index = m.captures.index('')
       return nil unless index
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
       full_urlpath_rexp, param_names, obj, range = @variable_endpoints[index]
       if range
         ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
         str = req_path[range]
-        param_values = [str]
+        values = [str]
       else
         m = full_urlpath_rexp.match(req_path)
-        param_values = m.captures
+        values = m.captures
       end
-      vars = build_urlpath_parameter_vars(param_names, param_values)
+      param_values = build_param_values(param_names, values)
       #; [!84inr] caches result when variable urlpath cache enabled.
       if cache
         cache.shift() if cache.length >= @cache_size
-        cache[req_path] = [obj, vars]
+        cache[req_path] = [obj, param_values]
       end
-      return obj, vars
+      return obj, param_values
     end
 
     alias find lookup      # :nodoc:      # for backward compatilibity
@@ -249,19 +251,21 @@ module Rack
 
     ## Returns [301, {"Location"=>location, ...}, [...]]. Override in subclass if necessary.
     def redirect_to(location)
+      #; [!9z57v] returns 301 and 'Location' header.
       content = "Redirect to #{location}"
       return [301, {"Content-Type"=>"text/plain", "Location"=>location}, [content]]
     end
 
-    ## Sets env['rack.urlpath_params'] = vars. Override in subclass if necessary.
-    def store_urlpath_params(env, vars)
-      env['rack.urlpath_params'] = vars if vars
+    ## Stores urlpath parameter values into `env['rack.urlpath_params']`. Override if necessary.
+    def store_param_values(env, values)
+      #; [!94riv] stores urlpath param values into `env['rack.urlpath_params]`.
+      env['rack.urlpath_params'] = values if values
     end
 
-    ## Returns Hash object representing urlpath parameters. Override if necessary.
+    ## Returns Hash object representing urlpath parameter values. Override if necessary.
     ## ex:
     ##     module OverridingJetRouter
-    ##       def build_urlpath_parameter_vars(names, values)
+    ##       def build_param_values(names, values)
     ##         d = {}
     ##         names.zip(values).each {|k, v|
     ##           ## converts urlpath pavam value into integer
@@ -272,13 +276,13 @@ module Rack
     ##       end
     ##     end
     ##     Rack::JetRouter.prepend(OverridingJetRouter)
-    def build_urlpath_parameter_vars(names, values)
+    def build_param_values(names, values)
       return Hash[names.zip(values)]
     end
 
     public
 
-    def normalize_mapping_keys(dict)   # called from Builder class
+    def normalize_method_mapping(dict)   # called from Builder class
       #; [!r7cmk] converts keys into string.
       #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
@@ -299,14 +303,14 @@ module Rack
     ## Returns regexp string of path parameter. Override if necessary.
     ## ex:
     ##     module OverridingJetRouter
-    ##       def param_pattern(param)
+    ##       def param2rexp(param)
     ##         return '\d+' if param == "id" || param =~ /_id\z/   # !!!
     ##         return super
     ##       end
     ##     end
     ##     Rack::JetRouter.prepend(OverridingJetRouter)
-    def param_pattern(param)   # called from Builder class
-      #; [!6sd9b] converts regexp string according to param name.
+    def param2rexp(param)   # called from Builder class
+      #; [!6sd9b] returns regexp string according to param name.
       #return '\d+' if param == "id" || param =~ /_id\z/
       return '[^./?]+'
     end
@@ -326,7 +330,7 @@ module Rack
         param_d = {}
         _traverse_mapping(mapping, "", mapping.class) do |path, item|
           #; [!j0pes] if item is a hash object, converts keys from symbol to string.
-          item = _normalize_mapping_keys(item) if item.is_a?(Hash)
+          item = _normalize_method_mapping(item) if item.is_a?(Hash)
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
           has_param = (path =~ /:\w|\(.*?\)/)
           if has_param
@@ -457,7 +461,7 @@ module Rack
         if param
           optional == nil  or raise "** internal error"
           yield param
-          pat1 = _param_pattern(param)
+          pat1 = _param2rexp(param)     # ex: '[^./?]+'
           pat2 = "(#{pat1})"
         #; [!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'.
         elsif optional == ".:format"
@@ -468,7 +472,7 @@ module Rack
         elsif optional
           sb = ['(?:']
           optional.scan(/(.*?)(?::(\w+))/) do |str, param_|
-            pat = _param_pattern(param)               # ex: pat == '[^./?]+'
+            pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
             sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
             yield param_
           end
@@ -483,8 +487,8 @@ module Rack
         return pat1, pat2
       end
 
-      def _param_pattern(param)
-        return @router.param_pattern(param)    # ex: '[^./?]+'
+      def _param2rexp(param)
+        return @router.param2rexp(param)    # ex: '[^./?]+'
       end
 
       def build_rexp(tree, &callback)
@@ -524,8 +528,8 @@ module Rack
         return (arr[0].length .. -(arr[1].length+1))   # ex: 7..-6  (Range object)
       end
 
-      def _normalize_mapping_keys(dict)
-        return @router.normalize_mapping_keys(dict)
+      def _normalize_method_mapping(dict)
+        return @router.normalize_method_mapping(dict)
       end
 
     end

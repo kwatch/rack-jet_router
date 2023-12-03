@@ -69,11 +69,11 @@ Oktest.scope do
     end
 
 
-    topic '#normalize_mapping_key()' do
+    topic '#normalize_method_mapping()' do
 
       spec "[!r7cmk] converts keys into string." do
         d1 = {GET: book_list_api, POST: book_create_api}
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2} == {"GET"=>book_list_api, "POST"=>book_create_api}
         #
         mapping = [
@@ -87,7 +87,7 @@ Oktest.scope do
 
       spec "[!z9kww] allows 'ANY' as request method." do
         d1 = {ANY: book_list_api, POST: book_create_api}
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2} == {"ANY"=>book_list_api, "POST"=>book_create_api}
         #
         mapping = [
@@ -101,7 +101,7 @@ Oktest.scope do
 
       spec "[!k7sme] raises error when unknown request method specified." do
         d1 = {LOCK: book_list_api}
-        pr = proc { @router.normalize_mapping_keys(d1) }
+        pr = proc { @router.normalize_method_mapping(d1) }
         ok {pr}.raise?(ArgumentError, 'LOCK: unknown request method.')
         #
         mapping = [
@@ -113,14 +113,14 @@ Oktest.scope do
 
       spec "[!itfsd] returns new Hash object." do
         d1 = {"GET" => book_list_api}
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2} == d1
         ok {d2}.NOT.same?(d1)
       end
 
       spec "[!gd08f] if arg is an instance of Hash subclass, returns new instance of it." do
         d1 = Map(GET: book_list_api)
-        d2 = @router.normalize_mapping_keys(d1)
+        d2 = @router.normalize_method_mapping(d1)
         ok {d2}.is_a?(Map)
         ok {d2} == Map.new.update({"GET"=>book_list_api})
       end
@@ -128,14 +128,14 @@ Oktest.scope do
     end
 
 
-    topic '#param_pattern()' do
+    topic '#param2rexp()' do
 
-      spec "[!6sd9b] converts regexp string according to param name." do
-        s = @router.instance_eval { param_pattern("id") }
+      spec "[!6sd9b] returns regexp string according to param name." do
+        s = @router.param2rexp("id")
         ok {s} == '[^./?]+'
-        s = @router.instance_eval { param_pattern("user_id") }
+        s = @router.param2rexp("user_id")
         ok {s} == '[^./?]+'
-        s = @router.instance_eval { param_pattern("username") }
+        s = @router.param2rexp("username")
         ok {s} == '[^./?]+'
       end
 
@@ -450,7 +450,7 @@ Oktest.scope do
 
       end
 
-      spec "[!2c32f] stores urlpath parameters as env['rack.urlpath_params']." do
+      spec "[!2c32f] stores urlpath parameter values into env['rack.urlpath_params']." do
         env = new_env(:GET,    '/api/books')
         @router.call(env)
         ok {env['rack.urlpath_params']} == nil
@@ -489,6 +489,28 @@ Oktest.scope do
         ok {arr[7]} == ["/api/books/:book_id/comments/:comment_id", comment_update_api]
         ok {arr[8]} == ["/admin/books", {"GET"=>admin_book_list_app, "POST"=>admin_book_create_app}]
         ok {arr[9]} == ["/admin/books/:id", {"GET"=>admin_book_show_app, "PUT"=>admin_book_update_app, "DELETE"=>admin_book_delete_app}]
+      end
+
+    end
+
+
+    topic '#redirect_to()' do
+
+      spec "[!9z57v] returns 301 and 'Location' header." do
+        ret = @router.instance_eval { redirect_to("/foo") }
+        headers = {"Content-Type" => "text/plain", "Location" => "/foo"}
+        ok {ret} == [301, headers, ["Redirect to /foo"]]
+      end
+
+    end
+
+
+    topic '#store_param_values()' do
+
+      spec "[!94riv] stores urlpath param values into `env['rack.urlpath_params]`." do
+        env = {}
+        @router.instance_eval { store_param_values(env, {"id"=>123}) }
+        ok {env} == {'rack.urlpath_params' => {"id"=>123}}
       end
 
     end
