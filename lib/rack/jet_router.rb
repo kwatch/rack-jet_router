@@ -250,7 +250,14 @@ module Rack
 
     def _find(req_path)
       prefix = req_path[@prefix_range]
-      subrouter = @variable_endpoints[prefix] || @variable_endpoints[""]
+      subrouter = @variable_endpoints[prefix]
+      if subrouter
+        trio = subrouter.find(req_path)
+        return trio if trio
+      end
+      #; [!8eapm] if prefix not exist, uses empty string as prefix.
+      #; [!b8p77] if request path not found in subrouter, try to find in empty string subrouter.
+      subrouter = @variable_endpoints[""]
       return subrouter.find(req_path)
     end
 

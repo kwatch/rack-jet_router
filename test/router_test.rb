@@ -493,6 +493,45 @@ Oktest.scope do
     end
 
 
+    topic '#_find()' do
+
+      before do
+        @app = app = proc { [200, {}, []] }
+        mapping = {
+          "/books/new/:category" => app,
+          "/books/en/:word" => app,
+          "/books/:title" => app,
+        }
+        filter = /\A\/books\/\w/
+        @router = Rack::JetRouter.new(mapping, prefix_minlength_target: filter)
+      end
+
+      spec "[!8eapm] if prefix not exist, uses empty string as prefix." do
+        app = @app
+        @router.instance_exec(self) do |_|
+          _.ok {@variable_endpoints.keys()} == ["/books/new", "/books/en/", ""]
+          _.ok {"/books/blabla"[@prefix_range]}       == "/books/bla"
+          _.ok {@variable_endpoints.keys()}.NOT.include?("/books/bla")
+          #
+          _.ok {_find("/books/blabla")} == [app, ["title"], ["blabla"]]
+        end
+      end
+
+      spec "[!b8p77] if request path not found in subrouter, try to find in empty string subrouter." do
+        app = @app
+        @router.instance_exec(self) do |_|
+          _.ok {@variable_endpoints.keys()} == ["/books/new", "/books/en/", ""]
+          _.ok {"/books/newbie"[@prefix_range]}   == "/books/new"
+          _.ok {@variable_endpoints.keys()}.include?("/books/new")
+          #
+          _.ok {_find("/books/newbie")} == [app, ["title"], ["newbie"]]
+          _.ok {_find("/books/new")}    == [app, ["title"], ["new"]]
+        end
+      end
+
+    end
+
+
     topic '#call()' do
 
       spec "[!hse47] invokes app mapped to request urlpath." do
