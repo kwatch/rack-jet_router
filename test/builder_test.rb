@@ -81,34 +81,6 @@ Oktest.scope do
         }
       end
 
-      spec "[!j0pes] if item is a hash object, converts keys from symbol to string." do
-        mapping = [
-          ['/api'           , [
-            ['/books'       , [
-              ['/new'       , {GET: book_new_api}],
-              ['/:id'       , {GET: book_show_api, DELETE: book_delete_api}],
-            ]],
-          ]],
-        ]
-        actuals = []
-        dict = @builder.build_tree(mapping) {|path, item, _| actuals << [path, item] }
-        ok {actuals} == [
-          ["/api/books/new", {"GET"=>book_new_api}],
-          ["/api/books/:id", {"GET"=>book_show_api, "DELETE"=>book_delete_api}],
-        ]
-        id = '[^./?]+'
-        #expected_map = {:GET=>book_show_api, :DELETE=>book_delete_api}
-        expected_map = {"GET"=>book_show_api, "DELETE"=>book_delete_api}
-        ok {dict} == {
-          "/api/books/" => {
-            :"[^./?]+"=> {
-              nil => [/\A\/api\/books\/(#{id})\z/,
-                      ["id"], expected_map, (11..-1)],
-            },
-          },
-        }
-      end
-
       spec "[!vfytw] handles urlpath pattern as variable when urlpath param exists." do
         mapping = [
           ['/api', [
@@ -332,9 +304,9 @@ Oktest.scope do
         actuals = []
         @builder.traverse_mapping(mapping) {|*args| actuals << args }
         ok {actuals} == [
-          ["/api/books"    , Map(GET: book_list_api)],
-          ["/api/books/new", Map(GET: book_new_api) ],
-          ["/api/books/:id", Map(GET: book_show_api, PUT: book_edit_api)],
+          ["/api/books"    , Map.new.update("GET"=>book_list_api)],
+          ["/api/books/new", Map.new.update("GET"=>book_new_api) ],
+          ["/api/books/:id", Map.new.update("GET"=>book_show_api, "PUT"=>book_edit_api)],
         ]
       end
 
@@ -362,6 +334,23 @@ Oktest.scope do
           ["/api/books/:id/edit", book_edit_api],
           ["/api/books/:book_id/comments"            , comment_create_api],
           ["/api/books/:book_id/comments/:comment_id", comment_update_api],
+        ]
+      end
+
+      spec "[!j0pes] if item is a hash object, converts keys from symbol to string." do
+        mapping = [
+          ['/api'           , [
+            ['/books'       , [
+              ['/new'       , {GET: book_new_api}],
+              ['/:id'       , {GET: book_show_api, DELETE: book_delete_api}],
+            ]],
+          ]],
+        ]
+        actuals = []
+        @builder.traverse_mapping(mapping) {|path, item| actuals << [path, item] }
+        ok {actuals} == [
+          ["/api/books/new", {"GET"=>book_new_api}],
+          ["/api/books/:id", {"GET"=>book_show_api, "DELETE"=>book_delete_api}],
         ]
       end
 

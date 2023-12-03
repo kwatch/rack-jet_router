@@ -332,8 +332,6 @@ module Rack
         tree = {}         # tree is a nested dict
         param_d = {}
         _traverse_mapping(mapping, "", mapping.class) do |path, item|
-          #; [!j0pes] if item is a hash object, converts keys from symbol to string.
-          item = _normalize_method_mapping(item) if item.is_a?(Hash)
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
           has_param = (path =~ /:\w|\(.*?\)/)
           if has_param
@@ -392,6 +390,8 @@ module Rack
             #; [!dj0sh] traverses mapping recursively.
             _traverse_mapping(item, full_path, mapping_class, &block)
           else
+            #; [!j0pes] if item is a hash object, converts keys from symbol to string.
+            item = _normalize_method_mapping(item) if item.is_a?(Hash)
             #; [!brhcs] yields block for each full path and handler.
             yield full_path, item
           end
