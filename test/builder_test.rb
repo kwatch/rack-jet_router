@@ -12,14 +12,6 @@ require_relative './shared'
 Oktest.scope do
 
 
-  class Map < Hash
-  end
-
-  def Map(**kwargs)
-    return Map.new.update(kwargs)
-  end
-
-
   topic Rack::JetRouter::Builder do
 
     book_list_api    = proc {|env| [200, {}, ["book_list_api"]]}

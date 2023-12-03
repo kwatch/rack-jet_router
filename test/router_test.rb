@@ -11,13 +11,6 @@ require_relative './shared'
 
 Oktest.scope do
 
-  class Map2 < Hash
-  end
-
-  def Map2(**kwargs)
-    return Map2.new.update(kwargs)
-  end
-
 
   topic Rack::JetRouter do
 
@@ -114,10 +107,10 @@ Oktest.scope do
       end
 
       spec "[!gd08f] if arg is an instance of Hash subclass, returns new instance of it." do
-        d1 = Map2(GET: book_list_api)
+        d1 = Map(GET: book_list_api)
         d2 = Rack::JetRouter.new([]).normalize_mapping_keys(d1)
-        ok {d2}.is_a?(Map2)
-        ok {d2} == Map2.new.update({"GET"=>book_list_api})
+        ok {d2}.is_a?(Map)
+        ok {d2} == Map.new.update({"GET"=>book_list_api})
       end
 
     end
