@@ -331,7 +331,7 @@ module Rack
       ##     ["/api/orders/:id" , order_app ],
       ##   ]
       ##
-      @all_endpoints    = []
+      @all_endpoints = []
       #; [!u2ff4] compiles urlpath mapping.
       builder = Builder.new(self, enable_range)
       tree = builder.build_tree(mapping) do |path, item, fixed_p|
