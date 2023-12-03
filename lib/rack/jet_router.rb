@@ -480,12 +480,14 @@ module Rack
       #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
       request_methods = REQUEST_METHODS
-      return dict.each_with_object({}) do |(meth, app), newdict|
-        meth_str = meth.to_s
+      newdict = {}
+      dict.each do |meth_sym, app|
+        meth_str = meth_sym.to_s
         request_methods[meth_str] || meth_str == 'ANY'  or
-          raise ArgumentError.new("#{meth.inspect}: unknown request method.")
+          raise ArgumentError.new("#{meth_sym.inspect}: unknown request method.")
         newdict[meth_str] = app
       end
+      return newdict
     end
 
     def param_pattern(param)   # called from Builder class
