@@ -141,12 +141,12 @@ module Rack
     def call(env)
       #; [!fpw8x] finds mapped app according to env['PATH_INFO'].
       req_path = env['PATH_INFO']
-      app, urlpath_params = lookup(req_path)
+      app, param_values = lookup(req_path)
       #; [!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found.
       #; [!3vsua] doesn't redict automatically when request path is '/'.
       if ! app && should_redirect?(env)
         location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
-        app, urlpath_params = lookup(location)
+        app, param_values = lookup(location)
         if app
           #; [!hyk62] adds QUERY_STRING to redirect location.
           qs = env['QUERY_STRING']
@@ -167,8 +167,8 @@ module Rack
         app = dict[req_meth] || (req_meth == 'HEAD' ? dict['GET'] : nil) || dict['ANY']
         return error_not_allowed(env) unless app
       end
-      #; [!2c32f] stores urlpath parameters as env['rack.urlpath_params'].
-      store_param_values(env, urlpath_params)
+      #; [!2c32f] stores urlpath parameter values into env['rack.urlpath_params'].
+      store_param_values(env, param_values)
       #; [!hse47] invokes app mapped to request urlpath.
       return app.call(env)   # make body empty when HEAD?
     end

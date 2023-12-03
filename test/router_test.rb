@@ -450,7 +450,7 @@ Oktest.scope do
 
       end
 
-      spec "[!2c32f] stores urlpath parameters as env['rack.urlpath_params']." do
+      spec "[!2c32f] stores urlpath parameter values into env['rack.urlpath_params']." do
         env = new_env(:GET,    '/api/books')
         @router.call(env)
         ok {env['rack.urlpath_params']} == nil
