@@ -90,9 +90,9 @@ module Rack
 
     class Builder
 
-      def initialize(router, enable_urlpath_param_range=true)
+      def initialize(router, enable_range=true)
         @router = router
-        @enable_urlpath_param_range = enable_urlpath_param_range
+        @enable_range = enable_range
       end
 
       def build_tree(mapping, &callback)
@@ -136,7 +136,7 @@ module Rack
             end
             sb << '\z'
             #; [!kz8m7] range object should be included into tuple if only one param exist.
-            range = @enable_urlpath_param_range ? _range_of_urlpath_param(path) : nil
+            range = @enable_range ? _range_of_urlpath_param(path) : nil
             #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
             d[nil] = [Regexp.compile(sb.join()), params, item, range]
           end
@@ -308,8 +308,7 @@ module Rack
     end
 
 
-    def initialize(mapping, cache_size: 0,
-                            enable_urlpath_param_range: true)
+    def initialize(mapping, cache_size: 0, enable_range: true)
       @cache_size = cache_size
       @cache_dict = cache_size > 0 ? {} : nil
       ##
@@ -334,7 +333,7 @@ module Rack
       ##
       @all_entrypoints    = []
       #; [!u2ff4] compiles urlpath mapping.
-      builder = Builder.new(self, enable_urlpath_param_range)
+      builder = Builder.new(self, enable_range)
       tree = builder.build_tree(mapping) do |path, item, fixed_p|
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
         @fixed_entrypoints[path] = item if fixed_p
