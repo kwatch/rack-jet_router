@@ -135,7 +135,8 @@ module Rack
         has_param = (path =~ /:\w+|\(.*?\)/)
         @fixed_endpoints[path] = item unless has_param
       end
-      tree = builder.build_tree(@all_endpoints)
+      endpoints = @all_endpoints.select {|path, _| ! @fixed_endpoints.key?(path) }
+      tree = builder.build_tree(endpoints)
       tuples = @variable_endpoints
       @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
     end
@@ -333,43 +334,39 @@ module Rack
         tree = {}         # tree is a nested dict
         param_d = {}
         entrypoint_pairs.each do |path, item|
-          #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
-          has_param = (path =~ /:\w|\(.*?\)/)
-          if has_param
-            d = tree
-            sb = ['\A']
-            pos = 0
-            params = []
-            #; [!uyupj] handles urlpath parameter such as ':id'.
-            #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
-            path.scan(/:(\w+)|\((.*?)\)/) do
-              param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
-              m = Regexp.last_match()
-              str = path[pos, m.begin(0) - pos]
-              pos = m.end(0)
-              #; [!akkkx] converts urlpath param into regexp.
-              pat1, pat2 = _param_patterns(param, optional) do |param_|
-                param_.freeze
-                params << (param_d[param_] ||= param_)
-              end
-              #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
-              d = _next_dict(d, str) unless str.empty?
-              d = (d[pat1.intern] ||= {})       # ex: pat1=='[^./?]+'
-              #; [!zoym3] urlpath string should be escaped.
-              sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
+          d = tree
+          sb = ['\A']
+          pos = 0
+          params = []
+          #; [!uyupj] handles urlpath parameter such as ':id'.
+          #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
+          path.scan(/:(\w+)|\((.*?)\)/) do
+            param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
+            m = Regexp.last_match()
+            str = path[pos, m.begin(0) - pos]
+            pos = m.end(0)
+            #; [!akkkx] converts urlpath param into regexp.
+            pat1, pat2 = _param_patterns(param, optional) do |param_|
+              param_.freeze
+              params << (param_d[param_] ||= param_)
             end
-            #; [!o642c] remained string after param should be handled correctly.
-            str = pos == 0 ? path : path[pos..-1]
-            unless str.empty?
-              d = _next_dict(d, str)
-              sb << Regexp.escape(str)          # ex: str=='.html'
-            end
-            sb << '\z'
-            #; [!kz8m7] range object should be included into tuple if only one param exist.
-            range = @enable_range ? _range_of_urlpath_param(path) : nil
-            #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
-            d[nil] = [Regexp.compile(sb.join()), params, item, range]
+            #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
+            d = _next_dict(d, str) unless str.empty?
+            d = (d[pat1.intern] ||= {})       # ex: pat1=='[^./?]+'
+            #; [!zoym3] urlpath string should be escaped.
+            sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
           end
+          #; [!o642c] remained string after param should be handled correctly.
+          str = pos == 0 ? path : path[pos..-1]
+          unless str.empty?
+            d = _next_dict(d, str)
+            sb << Regexp.escape(str)          # ex: str=='.html'
+          end
+          sb << '\z'
+          #; [!kz8m7] range object should be included into tuple if only one param exist.
+          range = @enable_range ? _range_of_urlpath_param(path) : nil
+          #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
+          d[nil] = [Regexp.compile(sb.join()), params, item, range]
         end
         return tree
       end

@@ -73,15 +73,6 @@ Oktest.scope do
         }
       end
 
-      spec "[!vfytw] handles urlpath pattern as variable when urlpath param exists." do
-        endpoint_pairs = [
-          ["/api/books/:id", {"GET"=>book_show_api}],
-        ]
-        dict = @builder.build_tree(endpoint_pairs)
-        ok {dict.keys()} == ["/api/books/"]
-        ok {dict["/api/books/"].keys()} == [:"[^./?]+"]
-      end
-
       spec "[!uyupj] handles urlpath parameter such as ':id'." do
         endpoint_pairs = [
           ["/api/books/:book_id/comments"    , {"POST"=>comment_create_api}],
