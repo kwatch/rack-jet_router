@@ -494,6 +494,17 @@ Oktest.scope do
     end
 
 
+    topic '#redirect_to()' do
+
+      spec "[!9z57v] returns 301 and 'Location' header." do
+        ret = @router.instance_eval { redirect_to("/foo") }
+        headers = {"Content-Type" => "text/plain", "Location" => "/foo"}
+        ok {ret} == [301, headers, ["Redirect to /foo"]]
+      end
+
+    end
+
+
   end
 
 

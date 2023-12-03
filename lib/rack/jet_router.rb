@@ -249,6 +249,7 @@ module Rack
 
     ## Returns [301, {"Location"=>location, ...}, [...]]. Override in subclass if necessary.
     def redirect_to(location)
+      #; [!9z57v] returns 301 and 'Location' header.
       content = "Redirect to #{location}"
       return [301, {"Content-Type"=>"text/plain", "Location"=>location}, [content]]
     end
