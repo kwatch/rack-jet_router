@@ -260,6 +260,7 @@ module Rack
       subrouter = @variable_endpoints[""]
       return subrouter.find(req_path)
     end
+    private :_find
 
     ## Yields pair of urlpath pattern and app.
     def each(&block)
