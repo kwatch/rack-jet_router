@@ -331,6 +331,7 @@ module Rack
 
       def traverse_mapping(mapping, &block)
         _traverse_mapping(mapping, "", mapping.class, &block)
+        nil
       end
 
       private
