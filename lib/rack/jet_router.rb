@@ -204,7 +204,7 @@ module Rack
         m = full_urlpath_rexp.match(req_path)
         param_values = m.captures
       end
-      vars = build_urlpath_parameter_vars(param_names, param_values)
+      vars = build_param_values(param_names, param_values)
       #; [!84inr] caches result when variable urlpath cache enabled.
       if cache
         cache.shift() if cache.length >= @cache_size
@@ -258,10 +258,10 @@ module Rack
       env['rack.urlpath_params'] = vars if vars
     end
 
-    ## Returns Hash object representing urlpath parameters. Override if necessary.
+    ## Returns Hash object representing urlpath parameter values. Override if necessary.
     ## ex:
     ##     module OverridingJetRouter
-    ##       def build_urlpath_parameter_vars(names, values)
+    ##       def build_param_values(names, values)
     ##         d = {}
     ##         names.zip(values).each {|k, v|
     ##           ## converts urlpath pavam value into integer
@@ -272,7 +272,7 @@ module Rack
     ##       end
     ##     end
     ##     Rack::JetRouter.prepend(OverridingJetRouter)
-    def build_urlpath_parameter_vars(names, values)
+    def build_param_values(names, values)
       return Hash[names.zip(values)]
     end
 
