@@ -131,11 +131,11 @@ Oktest.scope do
     topic '#param2rexp()' do
 
       spec "[!6sd9b] returns regexp string according to param name." do
-        s = @router.instance_eval { param2rexp("id") }
+        s = @router.param2rexp("id")
         ok {s} == '[^./?]+'
-        s = @router.instance_eval { param2rexp("user_id") }
+        s = @router.param2rexp("user_id")
         ok {s} == '[^./?]+'
-        s = @router.instance_eval { param2rexp("username") }
+        s = @router.param2rexp("username")
         ok {s} == '[^./?]+'
       end
 
