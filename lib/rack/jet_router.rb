@@ -377,6 +377,10 @@ module Rack
         return tree
       end
 
+      def traverse_mapping(mapping, &block)
+        _traverse_mapping(mapping, "", mapping.class, &block)
+      end
+
       private
 
       def _traverse_mapping(mapping, base_path, mapping_class, &block)

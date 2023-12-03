@@ -279,7 +279,7 @@ Oktest.scope do
     end
 
 
-    topic '#_traverse_mapping()' do
+    topic '#traverse_mapping()' do
 
       spec "[!9s3f0] supports both nested list mapping and nested dict mapping." do
         expected = [
@@ -298,9 +298,7 @@ Oktest.scope do
           ]],
         ]
         actuals1 = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping1, "", mapping1.class) {|*args| actuals1 << args }
-        end
+        @builder.traverse_mapping(mapping1) {|*args| actuals1 << args }
         ok {actuals1} == expected
         #
         mapping2 = {
@@ -313,9 +311,7 @@ Oktest.scope do
           },
         }
         actuals2 = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping2, "", mapping2.class) {|*args| actuals2 << args }
-        end
+        @builder.traverse_mapping(mapping2) {|*args| actuals2 << args }
         ok {actuals2} == expected
       end
 
@@ -334,9 +330,7 @@ Oktest.scope do
           },
         }
         actuals = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
-        end
+        @builder.traverse_mapping(mapping) {|*args| actuals << args }
         ok {actuals} == [
           ["/api/books"    , Map(GET: book_list_api)],
           ["/api/books/new", Map(GET: book_new_api) ],
@@ -360,9 +354,7 @@ Oktest.scope do
           ]],
         ]
         actuals = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
-        end
+        @builder.traverse_mapping(mapping) {|*args| actuals << args }
         ok {actuals} ==  [
           ["/api/books"         , book_list_api],
           ["/api/books/new"     , book_new_api],
@@ -389,9 +381,7 @@ Oktest.scope do
           },
         }
         actuals = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
-        end
+        @builder.traverse_mapping(mapping) {|*args| actuals << args }
         ok {actuals} ==  [
           ["/api/books"         , book_list_api],
           ["/api/books/new"     , book_new_api],
