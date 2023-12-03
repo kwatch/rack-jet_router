@@ -80,7 +80,7 @@ Oktest.scope do
           ['/books', {:GET=>book_list_api, :POST=>book_create_api}]
         ]
         Rack::JetRouter.new(mapping).instance_exec(self) do |_|
-          dict = @fixed_entrypoint_dict
+          dict = @fixed_entrypoints
           _.ok {dict['/books']} == {'GET'=>book_list_api, 'POST'=>book_create_api}
         end
       end
@@ -94,7 +94,7 @@ Oktest.scope do
           ['/books', {'ANY'=>book_list_api, 'POST'=>book_create_api}]
         ]
         Rack::JetRouter.new(mapping).instance_exec(self) do |_|
-          dict = @fixed_entrypoint_dict
+          dict = @fixed_entrypoints
           _.ok {dict['/books']} == {'ANY'=>book_list_api, 'POST'=>book_create_api}
         end
       end
@@ -225,7 +225,7 @@ Oktest.scope do
           ".gsub(/\s+/, '')
           #_.ok {@urlpath_rexp} == Regexp.new(expected)
           _.ok {@urlpath_rexp} == %r`\A/a(?:pi/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))|dmin/books/#{id}(\z))\z`
-          _.ok {@fixed_entrypoint_dict} == {
+          _.ok {@fixed_entrypoints} == {
             '/'                => welcome_app,
             '/index.html'      => welcome_app,
             '/api/books'       => book_list_api,
@@ -235,7 +235,7 @@ Oktest.scope do
               'POST'=>admin_book_create_app,
             },
           }
-          _.ok {@variable_entrypoint_list} == [
+          _.ok {@variable_entrypoints} == [
             [%r'\A/api/books/([^./?]+)\z',      ['id'], book_show_api, (11..-1)],
             [%r'\A/api/books/([^./?]+)/edit\z', ['id'], book_edit_api, (11..-6)],
             [%r'\A/api/books/([^./?]+)/comments\z',          ['book_id'], comment_create_api, (11..-10)],
@@ -253,8 +253,8 @@ Oktest.scope do
         ]
         router = Rack::JetRouter.new(mapping)
         router.instance_exec(self) do |_|
-          dict = @fixed_entrypoint_dict
-          list = @variable_entrypoint_list
+          dict = @fixed_entrypoints
+          list = @variable_entrypoints
           rexp = @urlpath_rexp
           _.ok {dict} == {'/api/books' => book_list_api}
           _.ok {list} == []
