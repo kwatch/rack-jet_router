@@ -168,7 +168,7 @@ module Rack
         return error_not_allowed(env) unless app
       end
       #; [!2c32f] stores urlpath parameters as env['rack.urlpath_params'].
-      store_urlpath_params(env, urlpath_params)
+      store_param_values(env, urlpath_params)
       #; [!hse47] invokes app mapped to request urlpath.
       return app.call(env)   # make body empty when HEAD?
     end
@@ -253,8 +253,8 @@ module Rack
       return [301, {"Content-Type"=>"text/plain", "Location"=>location}, [content]]
     end
 
-    ## Sets env['rack.urlpath_params'] = vars. Override in subclass if necessary.
-    def store_urlpath_params(env, vars)
+    ## Stores urlpath parameter values into `env['rack.urlpath_params']`. Override if necessary.
+    def store_param_values(env, vars)
       env['rack.urlpath_params'] = vars if vars
     end
 
