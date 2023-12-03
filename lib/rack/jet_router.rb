@@ -16,44 +16,68 @@ module Rack
   ##
   ## Jet-speed router class, derived from Keight.rb.
   ##
-  ## ex:
-  ##   ### (assume that 'xxxx_app' are certain Rack applications.)
-  ##   mapping = {
-  ##       "/"                       => home_app,
-  ##       "/api" => {
-  ##           "/books" => {
-  ##               ""                => books_app,
-  ##               "/:id(.:format)"  => book_app,
-  ##               "/:book_id/comments/:comment_id" => comment_app,
-  ##           },
-  ##       },
-  ##       "/admin" => {
-  ##           "/books"              => admin_books_app,
-  ##       },
-  ##   }
-  ##   router = Rack::JetRouter.new(mapping)
-  ##   router.lookup("/api/books/123.html")
-  ##       #=> [book_app, {"id"=>"123", "format"=>"html"}]
-  ##   status, headers, body = router.call(env)
+  ## Example #1:
+  ##     ### (assume that 'xxxx_app' are certain Rack applications.)
+  ##     mapping = {
+  ##         "/"                       => home_app,
+  ##         "/api" => {
+  ##             "/books" => {
+  ##                 ""                => books_app,
+  ##                 "/:id(.:format)"  => book_app,
+  ##                 "/:book_id/comments/:comment_id" => comment_app,
+  ##             },
+  ##         },
+  ##         "/admin" => {
+  ##             "/books"              => admin_books_app,
+  ##         },
+  ##     }
+  ##     router = Rack::JetRouter.new(mapping)
+  ##     router.lookup("/api/books/123.html")
+  ##         #=> [book_app, {"id"=>"123", "format"=>"html"}]
+  ##     status, headers, body = router.call(env)
   ##
-  ##   ### or:
-  ##   mapping = [
-  ##       ["/"                       , {GET: home_app}],
-  ##       ["/api", [
-  ##           ["/books", [
-  ##               [""                , {GET: book_list_app, POST: book_create_app}],
-  ##               ["/:id(.:format)"  , {GET: book_show_app, PUT: book_update_app}],
-  ##               ["/:book_id/comments/:comment_id", {POST: comment_create_app}],
-  ##           ]],
-  ##       ]],
-  ##       ["/admin", [
-  ##           ["/books"              , {ANY: admin_books_app}],
-  ##       ]],
-  ##   ]
-  ##   router = Rack::JetRouter.new(mapping)
-  ##   router.lookup("/api/books/123")
-  ##       #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
-  ##   status, headers, body = router.call(env)
+  ## Example #2:
+  ##     mapping = [
+  ##         ["/"                       , {GET: home_app}],
+  ##         ["/api", [
+  ##             ["/books", [
+  ##                 [""                , {GET: book_list_app, POST: book_create_app}],
+  ##                 ["/:id(.:format)"  , {GET: book_show_app, PUT: book_update_app}],
+  ##                 ["/:book_id/comments/:comment_id", {POST: comment_create_app}],
+  ##             ]],
+  ##         ]],
+  ##         ["/admin", [
+  ##             ["/books"              , {ANY: admin_books_app}],
+  ##         ]],
+  ##     ]
+  ##     router = Rack::JetRouter.new(mapping)
+  ##     router.lookup("/api/books/123")
+  ##         #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
+  ##     status, headers, body = router.call(env)
+  ##
+  ## Example #3:
+  ##     class Map < Hash         # define subclass of Hash
+  ##     end
+  ##     def Map(**kwargs)        # define helper method to create Map object easily
+  ##       return Map.new.update(kwargs)
+  ##     end
+  ##     mapping = {
+  ##         "/"                       => Map(GET: home_app),
+  ##         "/api" => {
+  ##             "/books" => {
+  ##                 ""                => Map(GET: book_list_app, POST: book_create_app),
+  ##                 "/:id(.:format)"  => Map(GET: book_show_app, PUT: book_update_app),
+  ##                 "/:book_id/comments/:comment_id" => Map(POST: comment_create_app),
+  ##             },
+  ##         },
+  ##         "/admin" => {
+  ##             "/books"              => Map(ANY: admin_books_app),
+  ##         },
+  ##     }
+  ##     router = Rack::JetRouter.new(mapping)
+  ##     router.lookup("/api/books/123")
+  ##         #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
+  ##     status, headers, body = router.call(env)
   ##
   class JetRouter
 
