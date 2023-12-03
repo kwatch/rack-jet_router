@@ -315,11 +315,11 @@ Oktest.scope do
       end
 
       spec "[!evu7t] ignores non-target path when calculating prefix range." do
-        r1 = Rack::JetRouter.new(whole_urlpath_mapping, hash_target: /\A\/api\//)
+        r1 = Rack::JetRouter.new(whole_urlpath_mapping, prefix_minlength_target: /\A\/api\//)
         range = r1.instance_eval { @prefix_range }
         ok {range} == (0...11)
         #
-        r2 = Rack::JetRouter.new(whole_urlpath_mapping, hash_target: /\A\/admin\//)
+        r2 = Rack::JetRouter.new(whole_urlpath_mapping, prefix_minlength_target: /\A\/admin\//)
         range = r2.instance_eval { @prefix_range }
         ok {range} == (0...13)
       end
@@ -362,7 +362,7 @@ Oktest.scope do
       end
 
       spec "[!whzmm] uses empty string as prefix if prefix length is too short." do
-        router = Rack::JetRouter.new(whole_urlpath_mapping, hash_target: /\A\/admin\/\w{5}\//)
+        router = Rack::JetRouter.new(whole_urlpath_mapping, prefix_minlength_target: /\A\/admin\/\w{5}\//)
         range = router.instance_eval { @prefix_range }
         ok {range} == (0...13)
         variable_endpoints = router.instance_eval { @variable_endpoints }

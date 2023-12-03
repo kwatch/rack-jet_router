@@ -83,12 +83,11 @@ module Rack
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
     def initialize(mapping, cache_size: 0, env_key: 'rack.urlpath_params',
-                            hash_target: /\A\/\w/,
+                            prefix_minlength_target: /\A\/\w/,
                             int_param: nil,          # ex: /(?:\A|_)id\z/
                             urlpath_cache_size: 0,   # for backward compatibility
                             _enable_range: true)     # undocumentend keyword arg
       @env_key = env_key
-      @hash_target = hash_target
       @int_param = int_param
       #; [!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility.
       @cache_size = [cache_size, urlpath_cache_size].max()
@@ -159,7 +158,7 @@ module Rack
       end
       #; [!qgdm4] calculates prefix range.
       #; [!evu7t] ignores non-target path when calculating prefix range.
-      min_index = pairs.select {|path, _| hash_target === path } \
+      min_index = pairs.select {|path, _| prefix_minlength_target === path } \
                        .collect {|path, _| path =~ param_rexp } \
                        .min() || 0
       @prefix_range = (0...min_index)
