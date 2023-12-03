@@ -458,17 +458,19 @@ module Rack
     end
 
     ## Returns Hash object representing urlpath parameters. Override if necessary.
-    ##
     ## ex:
-    ##     class MyRouter < JetRouter
+    ##     module OverridingJetRouter
     ##       def build_urlpath_parameter_vars(names, values)
-    ##         return names.zip(values).each_with_object({}) {|(k, v), d|
+    ##         d = {}
+    ##         names.zip(values).each {|k, v|
     ##           ## converts urlpath pavam value into integer
-    ##           v = v.to_i if k == 'id' || k.end_with?('_id')
+    ##           v = v.to_i if k == "id" || k.end_with?("_id")
     ##           d[k] = v
     ##         }
+    ##         return d
     ##       end
     ##     end
+    ##     Rack::JetRouter.prepend(OverridingJetRouter)
     def build_urlpath_parameter_vars(names, values)
       return Hash[names.zip(values)]
     end
@@ -493,6 +495,15 @@ module Rack
       return newdict
     end
 
+    ## Returns regexp string of path parameter. Override if necessary.
+    ## ex:
+    ##     module OverridingJetRouter
+    ##       def param_pattern(param)
+    ##         return '\d+' if param == "id" || param =~ /_id\z/   # !!!
+    ##         return super
+    ##       end
+    ##     end
+    ##     Rack::JetRouter.prepend(OverridingJetRouter)
     def param_pattern(param)   # called from Builder class
       #; [!6sd9b] converts regexp string according to param name.
       #return '\d+' if param == "id" || param =~ /_id\z/
