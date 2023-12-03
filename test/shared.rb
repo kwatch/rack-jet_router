@@ -5,3 +5,11 @@ require 'oktest'
 require 'rack'
 require 'rack/mock'
 require 'rack/jet_router'
+
+
+class Map < Hash
+end
+
+def Map(**kwargs)
+  return Map.new.update(kwargs)
+end

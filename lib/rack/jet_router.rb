@@ -16,48 +16,76 @@ module Rack
   ##
   ## Jet-speed router class, derived from Keight.rb.
   ##
-  ## ex:
-  ##   ### (assume that 'xxxx_app' are certain Rack applications.)
-  ##   mapping = {
-  ##       '/'                       => home_app,
-  ##       '/api' => {
-  ##           '/books' => {
-  ##               ''                => books_app,
-  ##               '/:id(.:format)'  => book_app,
-  ##               '/:book_id/comments/:comment_id' => comment_app,
-  ##           },
-  ##       },
-  ##       '/admin' => {
-  ##           '/books'              => admin_books_app,
-  ##       },
-  ##   }
-  ##   router = Rack::JetRouter.new(mapping)
-  ##   router.lookup('/api/books/123.html')
-  ##       #=> [book_app, {"id"=>"123", "format"=>"html"}]
-  ##   status, headers, body = router.call(env)
+  ## Example #1:
+  ##     ### (assume that 'xxxx_app' are certain Rack applications.)
+  ##     mapping = {
+  ##         "/"                       => home_app,
+  ##         "/api" => {
+  ##             "/books" => {
+  ##                 ""                => books_app,
+  ##                 "/:id(.:format)"  => book_app,
+  ##                 "/:book_id/comments/:comment_id" => comment_app,
+  ##             },
+  ##         },
+  ##         "/admin" => {
+  ##             "/books"              => admin_books_app,
+  ##         },
+  ##     }
+  ##     router = Rack::JetRouter.new(mapping)
+  ##     router.lookup("/api/books/123.html")
+  ##         #=> [book_app, {"id"=>"123", "format"=>"html"}]
+  ##     status, headers, body = router.call(env)
   ##
-  ##   ### or:
-  ##   mapping = [
-  ##       ['/'                       , {GET: home_app}],
-  ##       ['/api', [
-  ##           ['/books', [
-  ##               [''                , {GET: book_list_app, POST: book_create_app}],
-  ##               ['/:id(.:format)'  , {GET: book_show_app, PUT: book_update_app}],
-  ##               ['/:book_id/comments/:comment_id', {POST: comment_create_app}],
-  ##           ]],
-  ##       ]],
-  ##       ['/admin', [
-  ##           ['/books'              , {ANY: admin_books_app}],
-  ##       ]],
-  ##   ]
-  ##   router = Rack::JetRouter.new(mapping)
-  ##   router.lookup('/api/books/123')
-  ##       #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
-  ##   status, headers, body = router.call(env)
+  ## Example #2:
+  ##     mapping = [
+  ##         ["/"                       , {GET: home_app}],
+  ##         ["/api", [
+  ##             ["/books", [
+  ##                 [""                , {GET: book_list_app, POST: book_create_app}],
+  ##                 ["/:id(.:format)"  , {GET: book_show_app, PUT: book_update_app}],
+  ##                 ["/:book_id/comments/:comment_id", {POST: comment_create_app}],
+  ##             ]],
+  ##         ]],
+  ##         ["/admin", [
+  ##             ["/books"              , {ANY: admin_books_app}],
+  ##         ]],
+  ##     ]
+  ##     router = Rack::JetRouter.new(mapping)
+  ##     router.lookup("/api/books/123")
+  ##         #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
+  ##     status, headers, body = router.call(env)
+  ##
+  ## Example #3:
+  ##     class Map < Hash         # define subclass of Hash
+  ##     end
+  ##     def Map(**kwargs)        # define helper method to create Map object easily
+  ##       return Map.new.update(kwargs)
+  ##     end
+  ##     mapping = {
+  ##         "/"                       => Map(GET: home_app),
+  ##         "/api" => {
+  ##             "/books" => {
+  ##                 ""                => Map(GET: book_list_app, POST: book_create_app),
+  ##                 "/:id(.:format)"  => Map(GET: book_show_app, PUT: book_update_app),
+  ##                 "/:book_id/comments/:comment_id" => Map(POST: comment_create_app),
+  ##             },
+  ##         },
+  ##         "/admin" => {
+  ##             "/books"              => Map(ANY: admin_books_app),
+  ##         },
+  ##     }
+  ##     router = Rack::JetRouter.new(mapping)
+  ##     router.lookup("/api/books/123")
+  ##         #=> [{"GET"=>book_show_app, "PUT"=>book_update_app}, {"id"=>"123", "format"=>nil}]
+  ##     status, headers, body = router.call(env)
   ##
   class JetRouter
 
     RELEASE = '$Release: 0.0.0 $'.split()[1]
+
+    #; [!haggu] contains available request methods.
+    REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
+                        .each_with_object({}) {|s, d| d[s] = s.intern }
 
 
     class Builder
@@ -67,10 +95,10 @@ module Rack
         @enable_urlpath_param_range = enable_urlpath_param_range
       end
 
-      def build_nested_dict(mapping, &callback)
+      def build_tree(mapping, &callback)
         block_given_p = block_given?()
         #; [!6oa05] builds nested hash object from mapping data.
-        nested_dict = {}
+        tree = {}         # tree is a nested dict
         param_d = {}
         _traverse_mapping(mapping, "", mapping.class) do |path, item|
           #; [!j0pes] if item is a hash object, converts keys from symbol to string.
@@ -78,7 +106,7 @@ module Rack
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
           variable_p = (path =~ /:\w|\(.*?\)/)
           if variable_p
-            d = nested_dict
+            d = tree
             sb = ['\A']
             pos = 0
             params = []
@@ -116,7 +144,7 @@ module Rack
           fixed_p = ! variable_p
           yield path, item, fixed_p if block_given_p
         end
-        return nested_dict
+        return tree
       end
 
       private
@@ -236,10 +264,10 @@ module Rack
         return @router.param_pattern(param)    # ex: '[^./?]+'
       end
 
-      def build_rexp(nested_dict, &callback)
+      def build_rexp(tree, &callback)
         #; [!65yw6] converts nested dict into regexp.
         sb = ['\A']
-        _build_rexp(nested_dict, sb, &callback)
+        _build_rexp(tree, sb, &callback)
         sb << '\z'
         return Regexp.compile(sb.join())
       end
@@ -284,50 +312,49 @@ module Rack
                             enable_urlpath_param_range: true)
       @urlpath_cache_size     = urlpath_cache_size
       @variable_urlpath_cache = urlpath_cache_size > 0 ? {} : nil
-      @enable_urlpath_param_range = enable_urlpath_param_range
       ##
-      ## entry points which has no urlpath parameters.
+      ## Entry points without any path parameters.
       ## ex:
       ##   {
-      ##     '/'          => home_app,
-      ##     '/api/books' => books_app,
-      ##     '/api/orders => orders_app,
+      ##     "/"           => home_app,
+      ##     "/api/books"  => books_app,
+      ##     "/api/orders" => orders_app,
       ##   }
       ##
-      @fixed_urlpath_dict = {}
+      @fixed_entrypoints = {}
       ##
-      ## pair list of urlpath and handlers.
+      ## Pair list of path and Rack app.
       ## ex:
       ##   [
-      ##     ['/api/books'     , books_app ],
-      ##     ['/api/books/:id' , book_app  ],
-      ##     ['/api/orders'    , orders_app],
-      ##     ['/api/orders/:id', order_app ],
+      ##     ["/api/books"      , books_app ],
+      ##     ["/api/books/:id"  , book_app  ],
+      ##     ["/api/orders"     , orders_app],
+      ##     ["/api/orders/:id" , order_app ],
       ##   ]
       ##
       @all_entrypoints    = []
       #; [!u2ff4] compiles urlpath mapping.
       builder = Builder.new(self, enable_urlpath_param_range)
-      nested_dict = builder.build_nested_dict(mapping) do |path, item, fixed_p|
+      tree = builder.build_tree(mapping) do |path, item, fixed_p|
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        @fixed_urlpath_dict[path] = item if fixed_p
+        @fixed_entrypoints[path] = item if fixed_p
         @all_entrypoints << [path, item]
       end
       ##
-      ## entry points which has one or more urlpath parameters.
+      ## Entry points with one or more path parameters.
       ## ex:
       ##   [
       ##     [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
       ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
       ##   ]
       ##
-      @variable_urlpath_list = tuples = []
+      @variable_entrypoints = tuples = []
       ##
-      ## conbined regexp of variable urlpath patterns.
+      ## Combined regexp of variable urlpath patterns.
       ## ex:
       ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
       ##
-      @urlpath_rexp = builder.build_rexp(nested_dict) {|tuple| tuples << tuple }
+      @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
     end
 
     attr_reader :urlpath_rexp
@@ -375,7 +402,7 @@ module Rack
     def lookup(req_path)
       #; [!24khb] finds in fixed urlpaths at first.
       #; [!iwyzd] urlpath param value is nil when found in fixed urlpaths.
-      obj = @fixed_urlpath_dict[req_path]
+      obj = @fixed_entrypoints[req_path]
       return obj, nil if obj
       #; [!upacd] finds in variable urlpath cache if it is enabled.
       #; [!1zx7t] variable urlpath cache is based on LRU.
@@ -390,9 +417,9 @@ module Rack
       index = m.captures.find_index('')
       return nil unless index
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj, range = @variable_urlpath_list[index]
+      full_urlpath_rexp, param_names, obj, range = @variable_entrypoints[index]
       if range
-        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")
+        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
         str = req_path[range]
         param_values = [str]
       else
@@ -454,45 +481,57 @@ module Rack
     end
 
     ## Returns Hash object representing urlpath parameters. Override if necessary.
-    ##
     ## ex:
-    ##     class MyRouter < JetRouter
+    ##     module OverridingJetRouter
     ##       def build_urlpath_parameter_vars(names, values)
-    ##         return names.zip(values).each_with_object({}) {|(k, v), d|
+    ##         d = {}
+    ##         names.zip(values).each {|k, v|
     ##           ## converts urlpath pavam value into integer
-    ##           v = v.to_i if k == 'id' || k.end_with?('_id')
+    ##           v = v.to_i if k == "id" || k.end_with?("_id")
     ##           d[k] = v
     ##         }
+    ##         return d
     ##       end
     ##     end
+    ##     Rack::JetRouter.prepend(OverridingJetRouter)
     def build_urlpath_parameter_vars(names, values)
       return Hash[names.zip(values)]
     end
 
     public
 
-    def normalize_mapping_keys(dict)
+    def normalize_mapping_keys(dict)   # called from Builder class
       #; [!r7cmk] converts keys into string.
       #; [!z9kww] allows 'ANY' as request method.
       #; [!k7sme] raises error when unknown request method specified.
+      #; [!itfsd] returns new Hash object.
+      #; [!gd08f] if arg is an instance of Hash subclass, returns new instance of it.
       request_methods = REQUEST_METHODS
-      return dict.each_with_object({}) do |(meth, app), newdict|
-        meth_str = meth.to_s
+      #newdict = {}
+      newdict = dict.class.new
+      dict.each do |meth_sym, app|
+        meth_str = meth_sym.to_s
         request_methods[meth_str] || meth_str == 'ANY'  or
-          raise ArgumentError.new("#{meth.inspect}: unknown request method.")
+          raise ArgumentError.new("#{meth_sym}: unknown request method.")
         newdict[meth_str] = app
       end
+      return newdict
     end
 
-    def param_pattern(param)
+    ## Returns regexp string of path parameter. Override if necessary.
+    ## ex:
+    ##     module OverridingJetRouter
+    ##       def param_pattern(param)
+    ##         return '\d+' if param == "id" || param =~ /_id\z/   # !!!
+    ##         return super
+    ##       end
+    ##     end
+    ##     Rack::JetRouter.prepend(OverridingJetRouter)
+    def param_pattern(param)   # called from Builder class
       #; [!6sd9b] converts regexp string according to param name.
       #return '\d+' if param == "id" || param =~ /_id\z/
       return '[^./?]+'
     end
-
-    #; [!haggu] contains available request methods.
-    REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
-                        .each_with_object({}) {|s, d| d[s] = s.intern }
 
   end
 
