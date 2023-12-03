@@ -221,22 +221,11 @@ module Rack
         return pair
       end
       #; [!vpdzn] returns nil when urlpath not found.
-      m = @urlpath_rexp.match(req_path)
-      return nil unless m
-      index = m.captures.index('')
-      return nil unless index
+      trio = _find(req_path, @urlpath_rexp, @variable_endpoints)
+      return nil unless trio
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj, range, sep = @variable_endpoints[index]
-      if range
-        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
-        str = req_path[range]
-        ## `"/a/1/b/2"[3..-1].split('/b/')` is faster than `%r!\A/a/(\d+)/b/(\d+)\z!.match("/a/1/b/2").captures`
-        values = sep ? str.split(sep) : [str]
-      else
-        m = full_urlpath_rexp.match(req_path)
-        values = m.captures
-      end
-      param_values = build_param_values(param_names, values)
+      obj, params, values = trio
+      param_values = build_param_values(params, values)
       #; [!84inr] caches result when variable urlpath cache enabled.
       if cache
         cache.shift() if cache.length >= @cache_size
@@ -246,6 +235,26 @@ module Rack
     end
 
     alias find lookup      # :nodoc:      # for backward compatilibity
+
+    def _find(req_path, compound_path_rexp, variable_endpoints)
+      #; [!gapom] returns nil if request path not found.
+      m = compound_path_rexp.match(req_path)
+      return nil unless m
+      #; [!5quao] returns item, param names and param values if request path found.
+      index = m.captures.index('')  or raise "** internal error: req_path=#{req_path.inspect}"
+      path_rexp, params, item, range, sep = variable_endpoints[index]
+      if range
+        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
+        str = req_path[range]
+        ## `"/a/1/b/2"[3..-1].split('/b/')` is faster than `%r!\A/a/(\d+)/b/(\d+)\z!.match("/a/1/b/2").captures`
+        values = sep ? str.split(sep) : [str]
+      else
+        m = path_rexp.match(req_path)
+        values = m.captures
+      end
+      return item, params, values
+    end
+    private :_find
 
     ## Yields pair of urlpath pattern and app.
     def each(&block)

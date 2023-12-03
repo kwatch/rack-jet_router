@@ -456,6 +456,25 @@ Oktest.scope do
     end
 
 
+    topic '#_find()' do
+
+      spec "[!gapom] returns nil if request path not found." do
+        ret = @router.instance_eval {
+          _find("/api/stores/123", @urlpath_rexp, @variable_endpoints)
+        }
+        ok {ret} == nil
+      end
+
+      spec "[!5quao] returns item, param names and param values if request path found." do
+        ret = @router.instance_eval {
+          _find("/api/books/123", @urlpath_rexp, @variable_endpoints)
+        }
+        ok {ret} == [book_show_api, ["id"], ["123"]]
+      end
+
+    end
+
+
     topic '#call()' do
 
       spec "[!hse47] invokes app mapped to request urlpath." do
