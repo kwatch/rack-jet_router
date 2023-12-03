@@ -312,7 +312,7 @@ module Rack
       @cache_size = cache_size
       @cache_dict = cache_size > 0 ? {} : nil
       ##
-      ## Entry points without any path parameters.
+      ## Endpoints without any path parameters.
       ## ex:
       ##   {
       ##     "/"           => home_app,
@@ -320,9 +320,9 @@ module Rack
       ##     "/api/orders" => orders_app,
       ##   }
       ##
-      @fixed_entrypoints = {}
+      @fixed_endpoints = {}
       ##
-      ## Pair list of path and Rack app.
+      ## Pair list of endpoint and Rack app.
       ## ex:
       ##   [
       ##     ["/api/books"      , books_app ],
@@ -331,25 +331,25 @@ module Rack
       ##     ["/api/orders/:id" , order_app ],
       ##   ]
       ##
-      @all_entrypoints    = []
+      @all_endpoints    = []
       #; [!u2ff4] compiles urlpath mapping.
       builder = Builder.new(self, enable_range)
       tree = builder.build_tree(mapping) do |path, item, fixed_p|
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        @fixed_entrypoints[path] = item if fixed_p
-        @all_entrypoints << [path, item]
+        @fixed_endpoints[path] = item if fixed_p
+        @all_endpoints << [path, item]
       end
       ##
-      ## Entry points with one or more path parameters.
+      ## Endpoints with one or more path parameters.
       ## ex:
       ##   [
       ##     [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
       ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
       ##   ]
       ##
-      @variable_entrypoints = tuples = []
+      @variable_endpoints = tuples = []
       ##
-      ## Combined regexp of variable urlpath patterns.
+      ## Combined regexp of variable endpoints.
       ## ex:
       ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
       ##
@@ -401,7 +401,7 @@ module Rack
     def lookup(req_path)
       #; [!24khb] finds in fixed urlpaths at first.
       #; [!iwyzd] urlpath param value is nil when found in fixed urlpaths.
-      obj = @fixed_entrypoints[req_path]
+      obj = @fixed_endpoints[req_path]
       return obj, nil if obj
       #; [!upacd] finds in variable urlpath cache if it is enabled.
       #; [!1zx7t] variable urlpath cache is based on LRU.
@@ -416,7 +416,7 @@ module Rack
       index = m.captures.find_index('')
       return nil unless index
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj, range = @variable_entrypoints[index]
+      full_urlpath_rexp, param_names, obj, range = @variable_endpoints[index]
       if range
         ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
         str = req_path[range]
@@ -439,7 +439,7 @@ module Rack
     ## Yields pair of urlpath pattern and app.
     def each(&block)
       #; [!ep0pw] yields pair of urlpath pattern and app.
-      @all_entrypoints.each(&block)
+      @all_endpoints.each(&block)
     end
 
     protected
