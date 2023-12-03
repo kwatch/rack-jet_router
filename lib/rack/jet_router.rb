@@ -162,6 +162,7 @@ module Rack
         #; [!f1d7s] builds variable endpoint list.
         @variable_endpoints << tuple
       end
+      @subrouter = SubRouter.new(@urlpath_rexp, @variable_endpoints)
     end
 
     attr_reader :urlpath_rexp
@@ -221,7 +222,7 @@ module Rack
         return pair
       end
       #; [!vpdzn] returns nil when urlpath not found.
-      trio = _find(req_path, @urlpath_rexp, @variable_endpoints)
+      trio = _find(req_path)
       return nil unless trio
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
       obj, params, values = trio
@@ -236,9 +237,8 @@ module Rack
 
     alias find lookup      # :nodoc:      # for backward compatilibity
 
-    def _find(req_path, compound_path_rexp, variable_endpoints)
-      subrouter = SubRouter.new(compound_path_rexp, variable_endpoints)
-      return subrouter.find(req_path)
+    def _find(req_path)
+      return @subrouter.find(req_path)
     end
 
     ## Yields pair of urlpath pattern and app.
