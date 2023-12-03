@@ -87,12 +87,236 @@ module Rack
     REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
+    def initialize(mapping, cache_size: 0, enable_range: true)
+      @cache_size = cache_size
+      @cache_dict = cache_size > 0 ? {} : nil
+      ##
+      ## Endpoints without any path parameters.
+      ## ex:
+      ##   {
+      ##     "/"           => home_app,
+      ##     "/api/books"  => books_app,
+      ##     "/api/orders" => orders_app,
+      ##   }
+      ##
+      @fixed_endpoints = {}
+      ##
+      ## Pair list of endpoint and Rack app.
+      ## ex:
+      ##   [
+      ##     ["/api/books"      , books_app ],
+      ##     ["/api/books/:id"  , book_app  ],
+      ##     ["/api/orders"     , orders_app],
+      ##     ["/api/orders/:id" , order_app ],
+      ##   ]
+      ##
+      @all_endpoints = []
+      #; [!u2ff4] compiles urlpath mapping.
+      builder = Builder.new(self, enable_range)
+      tree = builder.build_tree(mapping) do |path, item, has_param|
+        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        @fixed_endpoints[path] = item unless has_param
+        @all_endpoints << [path, item]
+      end
+      ##
+      ## Endpoints with one or more path parameters.
+      ## ex:
+      ##   [
+      ##     [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
+      ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
+      ##   ]
+      ##
+      @variable_endpoints = tuples = []
+      ##
+      ## Combined regexp of variable endpoints.
+      ## ex:
+      ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
+      ##
+      @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
+    end
+
+    attr_reader :urlpath_rexp
+
+    ## Finds rack app according to PATH_INFO and REQUEST_METHOD and invokes it.
+    def call(env)
+      #; [!fpw8x] finds mapped app according to env['PATH_INFO'].
+      req_path = env['PATH_INFO']
+      app, urlpath_params = lookup(req_path)
+      #; [!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found.
+      #; [!3vsua] doesn't redict automatically when request path is '/'.
+      if ! app && should_redirect?(env)
+        location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
+        app, urlpath_params = lookup(location)
+        if app
+          #; [!hyk62] adds QUERY_STRING to redirect location.
+          qs = env['QUERY_STRING']
+          location = "#{location}?#{qs}" if qs && ! qs.empty?
+          return redirect_to(location)
+        end
+      end
+      #; [!30x0k] returns 404 when request urlpath not found.
+      return error_not_found(env) unless app
+      #; [!gclbs] if mapped object is a Hash...
+      if app.is_a?(Hash)
+        #; [!p1fzn] invokes app mapped to request method.
+        #; [!5m64a] returns 405 when request method is not allowed.
+        #; [!ys1e2] uses GET method when HEAD is not mapped.
+        #; [!2hx6j] try ANY method when request method is not mapped.
+        dict = app
+        req_meth = env['REQUEST_METHOD']
+        app = dict[req_meth] || (req_meth == 'HEAD' ? dict['GET'] : nil) || dict['ANY']
+        return error_not_allowed(env) unless app
+      end
+      #; [!2c32f] stores urlpath parameters as env['rack.urlpath_params'].
+      store_urlpath_params(env, urlpath_params)
+      #; [!hse47] invokes app mapped to request urlpath.
+      return app.call(env)   # make body empty when HEAD?
+    end
+
+    ## Finds app or Hash mapped to request path.
+    ##
+    ## ex:
+    ##    lookup('/api/books/123')   #=> [BookApp, {"id"=>"123"}]
+    def lookup(req_path)
+      #; [!24khb] finds in fixed urlpaths at first.
+      #; [!iwyzd] urlpath param value is nil when found in fixed urlpaths.
+      obj = @fixed_endpoints[req_path]
+      return obj, nil if obj
+      #; [!upacd] finds in variable urlpath cache if it is enabled.
+      #; [!1zx7t] variable urlpath cache is based on LRU.
+      cache = @cache_dict
+      if cache && (pair = cache.delete(req_path))
+        cache[req_path] = pair
+        return pair
+      end
+      #; [!vpdzn] returns nil when urlpath not found.
+      m = @urlpath_rexp.match(req_path)
+      return nil unless m
+      index = m.captures.find_index('')
+      return nil unless index
+      #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
+      full_urlpath_rexp, param_names, obj, range = @variable_endpoints[index]
+      if range
+        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
+        str = req_path[range]
+        param_values = [str]
+      else
+        m = full_urlpath_rexp.match(req_path)
+        param_values = m.captures
+      end
+      vars = build_urlpath_parameter_vars(param_names, param_values)
+      #; [!84inr] caches result when variable urlpath cache enabled.
+      if cache
+        cache.shift() if cache.length >= @cache_size
+        cache[req_path] = [obj, vars]
+      end
+      return obj, vars
+    end
+
+    alias find lookup      # :nodoc:      # for backward compatilibity
+
+    ## Yields pair of urlpath pattern and app.
+    def each(&block)
+      #; [!ep0pw] yields pair of urlpath pattern and app.
+      @all_endpoints.each(&block)
+    end
+
+    protected
+
+    ## Returns [404, {...}, [...]]. Override in subclass if necessary.
+    def error_not_found(env)
+      #; [!mlruv] returns 404 response.
+      return [404, {"Content-Type"=>"text/plain"}, ["404 Not Found"]]
+    end
+
+    ## Returns [405, {...}, [...]]. Override in subclass if necessary.
+    def error_not_allowed(env)
+      #; [!mjigf] returns 405 response.
+      return [405, {"Content-Type"=>"text/plain"}, ["405 Method Not Allowed"]]
+    end
+
+    ## Returns false when request path is '/' or request method is not GET nor HEAD.
+    ## (It is not recommended to redirect when request method is POST, PUT or DELETE,
+    ##  because browser doesn't handle redirect correctly on those methods.)
+    def should_redirect?(env)
+      #; [!dsu34] returns false when request path is '/'.
+      #; [!ycpqj] returns true when request method is GET or HEAD.
+      #; [!7q8xu] returns false when request method is POST, PUT or DELETE.
+      return false if env['PATH_INFO'] == '/'
+      req_method = env['REQUEST_METHOD']
+      return req_method == 'GET' || req_method == 'HEAD'
+    end
+
+    ## Returns [301, {"Location"=>location, ...}, [...]]. Override in subclass if necessary.
+    def redirect_to(location)
+      content = "Redirect to #{location}"
+      return [301, {"Content-Type"=>"text/plain", "Location"=>location}, [content]]
+    end
+
+    ## Sets env['rack.urlpath_params'] = vars. Override in subclass if necessary.
+    def store_urlpath_params(env, vars)
+      env['rack.urlpath_params'] = vars if vars
+    end
+
+    ## Returns Hash object representing urlpath parameters. Override if necessary.
+    ## ex:
+    ##     module OverridingJetRouter
+    ##       def build_urlpath_parameter_vars(names, values)
+    ##         d = {}
+    ##         names.zip(values).each {|k, v|
+    ##           ## converts urlpath pavam value into integer
+    ##           v = v.to_i if k == "id" || k.end_with?("_id")
+    ##           d[k] = v
+    ##         }
+    ##         return d
+    ##       end
+    ##     end
+    ##     Rack::JetRouter.prepend(OverridingJetRouter)
+    def build_urlpath_parameter_vars(names, values)
+      return Hash[names.zip(values)]
+    end
+
+    public
+
+    def normalize_mapping_keys(dict)   # called from Builder class
+      #; [!r7cmk] converts keys into string.
+      #; [!z9kww] allows 'ANY' as request method.
+      #; [!k7sme] raises error when unknown request method specified.
+      #; [!itfsd] returns new Hash object.
+      #; [!gd08f] if arg is an instance of Hash subclass, returns new instance of it.
+      request_methods = REQUEST_METHODS
+      #newdict = {}
+      newdict = dict.class.new
+      dict.each do |meth_sym, app|
+        meth_str = meth_sym.to_s
+        request_methods[meth_str] || meth_str == 'ANY'  or
+          raise ArgumentError.new("#{meth_sym}: unknown request method.")
+        newdict[meth_str] = app
+      end
+      return newdict
+    end
+
+    ## Returns regexp string of path parameter. Override if necessary.
+    ## ex:
+    ##     module OverridingJetRouter
+    ##       def param_pattern(param)
+    ##         return '\d+' if param == "id" || param =~ /_id\z/   # !!!
+    ##         return super
+    ##       end
+    ##     end
+    ##     Rack::JetRouter.prepend(OverridingJetRouter)
+    def param_pattern(param)   # called from Builder class
+      #; [!6sd9b] converts regexp string according to param name.
+      #return '\d+' if param == "id" || param =~ /_id\z/
+      return '[^./?]+'
+    end
+
 
     class Builder
 
-      def initialize(router, enable_urlpath_param_range=true)
+      def initialize(router, enable_range=true)
         @router = router
-        @enable_urlpath_param_range = enable_urlpath_param_range
+        @enable_range = enable_range
       end
 
       def build_tree(mapping, &callback)
@@ -104,8 +328,8 @@ module Rack
           #; [!j0pes] if item is a hash object, converts keys from symbol to string.
           item = _normalize_mapping_keys(item) if item.is_a?(Hash)
           #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
-          variable_p = (path =~ /:\w|\(.*?\)/)
-          if variable_p
+          has_param = (path =~ /:\w|\(.*?\)/)
+          if has_param
             d = tree
             sb = ['\A']
             pos = 0
@@ -136,13 +360,12 @@ module Rack
             end
             sb << '\z'
             #; [!kz8m7] range object should be included into tuple if only one param exist.
-            range = @enable_urlpath_param_range ? _range_of_urlpath_param(path) : nil
+            range = @enable_range ? _range_of_urlpath_param(path) : nil
             #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
             d[nil] = [Regexp.compile(sb.join()), params, item, range]
           end
           #; [!gls5k] yields callback if given.
-          fixed_p = ! variable_p
-          yield path, item, fixed_p if block_given_p
+          yield path, item, !! has_param if block_given_p
         end
         return tree
       end
@@ -307,231 +530,6 @@ module Rack
 
     end
 
-
-    def initialize(mapping, urlpath_cache_size: 0,
-                            enable_urlpath_param_range: true)
-      @urlpath_cache_size     = urlpath_cache_size
-      @variable_urlpath_cache = urlpath_cache_size > 0 ? {} : nil
-      ##
-      ## Entry points without any path parameters.
-      ## ex:
-      ##   {
-      ##     "/"           => home_app,
-      ##     "/api/books"  => books_app,
-      ##     "/api/orders" => orders_app,
-      ##   }
-      ##
-      @fixed_entrypoints = {}
-      ##
-      ## Pair list of path and Rack app.
-      ## ex:
-      ##   [
-      ##     ["/api/books"      , books_app ],
-      ##     ["/api/books/:id"  , book_app  ],
-      ##     ["/api/orders"     , orders_app],
-      ##     ["/api/orders/:id" , order_app ],
-      ##   ]
-      ##
-      @all_entrypoints    = []
-      #; [!u2ff4] compiles urlpath mapping.
-      builder = Builder.new(self, enable_urlpath_param_range)
-      tree = builder.build_tree(mapping) do |path, item, fixed_p|
-        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        @fixed_entrypoints[path] = item if fixed_p
-        @all_entrypoints << [path, item]
-      end
-      ##
-      ## Entry points with one or more path parameters.
-      ## ex:
-      ##   [
-      ##     [%r!\A/api/books/([^./?]+)\z! , ["id"], book_app , (11..-1)],
-      ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
-      ##   ]
-      ##
-      @variable_entrypoints = tuples = []
-      ##
-      ## Combined regexp of variable urlpath patterns.
-      ## ex:
-      ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
-      ##
-      @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
-    end
-
-    attr_reader :urlpath_rexp
-
-    ## Finds rack app according to PATH_INFO and REQUEST_METHOD and invokes it.
-    def call(env)
-      #; [!fpw8x] finds mapped app according to env['PATH_INFO'].
-      req_path = env['PATH_INFO']
-      app, urlpath_params = lookup(req_path)
-      #; [!wxt2g] guesses correct urlpath and redirects to it automaticaly when request path not found.
-      #; [!3vsua] doesn't redict automatically when request path is '/'.
-      if ! app && should_redirect?(env)
-        location = req_path =~ /\/\z/ ? req_path[0..-2] : req_path + '/'
-        app, urlpath_params = lookup(location)
-        if app
-          #; [!hyk62] adds QUERY_STRING to redirect location.
-          qs = env['QUERY_STRING']
-          location = "#{location}?#{qs}" if qs && ! qs.empty?
-          return redirect_to(location)
-        end
-      end
-      #; [!30x0k] returns 404 when request urlpath not found.
-      return error_not_found(env) unless app
-      #; [!gclbs] if mapped object is a Hash...
-      if app.is_a?(Hash)
-        #; [!p1fzn] invokes app mapped to request method.
-        #; [!5m64a] returns 405 when request method is not allowed.
-        #; [!ys1e2] uses GET method when HEAD is not mapped.
-        #; [!2hx6j] try ANY method when request method is not mapped.
-        dict = app
-        req_meth = env['REQUEST_METHOD']
-        app = dict[req_meth] || (req_meth == 'HEAD' ? dict['GET'] : nil) || dict['ANY']
-        return error_not_allowed(env) unless app
-      end
-      #; [!2c32f] stores urlpath parameters as env['rack.urlpath_params'].
-      store_urlpath_params(env, urlpath_params)
-      #; [!hse47] invokes app mapped to request urlpath.
-      return app.call(env)   # make body empty when HEAD?
-    end
-
-    ## Finds app or Hash mapped to request path.
-    ##
-    ## ex:
-    ##    lookup('/api/books/123')   #=> [BookApp, {"id"=>"123"}]
-    def lookup(req_path)
-      #; [!24khb] finds in fixed urlpaths at first.
-      #; [!iwyzd] urlpath param value is nil when found in fixed urlpaths.
-      obj = @fixed_entrypoints[req_path]
-      return obj, nil if obj
-      #; [!upacd] finds in variable urlpath cache if it is enabled.
-      #; [!1zx7t] variable urlpath cache is based on LRU.
-      cache = @variable_urlpath_cache
-      if cache && (pair = cache.delete(req_path))
-        cache[req_path] = pair
-        return pair
-      end
-      #; [!vpdzn] returns nil when urlpath not found.
-      m = @urlpath_rexp.match(req_path)
-      return nil unless m
-      index = m.captures.find_index('')
-      return nil unless index
-      #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj, range = @variable_entrypoints[index]
-      if range
-        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
-        str = req_path[range]
-        param_values = [str]
-      else
-        m = full_urlpath_rexp.match(req_path)
-        param_values = m.captures
-      end
-      vars = build_urlpath_parameter_vars(param_names, param_values)
-      #; [!84inr] caches result when variable urlpath cache enabled.
-      if cache
-        cache.shift() if cache.length >= @urlpath_cache_size
-        cache[req_path] = [obj, vars]
-      end
-      return obj, vars
-    end
-
-    alias find lookup      # :nodoc:      # for backward compatilibity
-
-    ## Yields pair of urlpath pattern and app.
-    def each(&block)
-      #; [!ep0pw] yields pair of urlpath pattern and app.
-      @all_entrypoints.each(&block)
-    end
-
-    protected
-
-    ## Returns [404, {...}, [...]]. Override in subclass if necessary.
-    def error_not_found(env)
-      #; [!mlruv] returns 404 response.
-      return [404, {"Content-Type"=>"text/plain"}, ["404 Not Found"]]
-    end
-
-    ## Returns [405, {...}, [...]]. Override in subclass if necessary.
-    def error_not_allowed(env)
-      #; [!mjigf] returns 405 response.
-      return [405, {"Content-Type"=>"text/plain"}, ["405 Method Not Allowed"]]
-    end
-
-    ## Returns false when request path is '/' or request method is not GET nor HEAD.
-    ## (It is not recommended to redirect when request method is POST, PUT or DELETE,
-    ##  because browser doesn't handle redirect correctly on those methods.)
-    def should_redirect?(env)
-      #; [!dsu34] returns false when request path is '/'.
-      #; [!ycpqj] returns true when request method is GET or HEAD.
-      #; [!7q8xu] returns false when request method is POST, PUT or DELETE.
-      return false if env['PATH_INFO'] == '/'
-      req_method = env['REQUEST_METHOD']
-      return req_method == 'GET' || req_method == 'HEAD'
-    end
-
-    ## Returns [301, {"Location"=>location, ...}, [...]]. Override in subclass if necessary.
-    def redirect_to(location)
-      content = "Redirect to #{location}"
-      return [301, {"Content-Type"=>"text/plain", "Location"=>location}, [content]]
-    end
-
-    ## Sets env['rack.urlpath_params'] = vars. Override in subclass if necessary.
-    def store_urlpath_params(env, vars)
-      env['rack.urlpath_params'] = vars if vars
-    end
-
-    ## Returns Hash object representing urlpath parameters. Override if necessary.
-    ## ex:
-    ##     module OverridingJetRouter
-    ##       def build_urlpath_parameter_vars(names, values)
-    ##         d = {}
-    ##         names.zip(values).each {|k, v|
-    ##           ## converts urlpath pavam value into integer
-    ##           v = v.to_i if k == "id" || k.end_with?("_id")
-    ##           d[k] = v
-    ##         }
-    ##         return d
-    ##       end
-    ##     end
-    ##     Rack::JetRouter.prepend(OverridingJetRouter)
-    def build_urlpath_parameter_vars(names, values)
-      return Hash[names.zip(values)]
-    end
-
-    public
-
-    def normalize_mapping_keys(dict)   # called from Builder class
-      #; [!r7cmk] converts keys into string.
-      #; [!z9kww] allows 'ANY' as request method.
-      #; [!k7sme] raises error when unknown request method specified.
-      #; [!itfsd] returns new Hash object.
-      #; [!gd08f] if arg is an instance of Hash subclass, returns new instance of it.
-      request_methods = REQUEST_METHODS
-      #newdict = {}
-      newdict = dict.class.new
-      dict.each do |meth_sym, app|
-        meth_str = meth_sym.to_s
-        request_methods[meth_str] || meth_str == 'ANY'  or
-          raise ArgumentError.new("#{meth_sym}: unknown request method.")
-        newdict[meth_str] = app
-      end
-      return newdict
-    end
-
-    ## Returns regexp string of path parameter. Override if necessary.
-    ## ex:
-    ##     module OverridingJetRouter
-    ##       def param_pattern(param)
-    ##         return '\d+' if param == "id" || param =~ /_id\z/   # !!!
-    ##         return super
-    ##       end
-    ##     end
-    ##     Rack::JetRouter.prepend(OverridingJetRouter)
-    def param_pattern(param)   # called from Builder class
-      #; [!6sd9b] converts regexp string according to param name.
-      #return '\d+' if param == "id" || param =~ /_id\z/
-      return '[^./?]+'
-    end
 
   end
 

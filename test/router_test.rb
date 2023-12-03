@@ -80,7 +80,7 @@ Oktest.scope do
           ['/books', {:GET=>book_list_api, :POST=>book_create_api}]
         ]
         Rack::JetRouter.new(mapping).instance_exec(self) do |_|
-          dict = @fixed_entrypoints
+          dict = @fixed_endpoints
           _.ok {dict['/books']} == {'GET'=>book_list_api, 'POST'=>book_create_api}
         end
       end
@@ -94,7 +94,7 @@ Oktest.scope do
           ['/books', {'ANY'=>book_list_api, 'POST'=>book_create_api}]
         ]
         Rack::JetRouter.new(mapping).instance_exec(self) do |_|
-          dict = @fixed_entrypoints
+          dict = @fixed_endpoints
           _.ok {dict['/books']} == {'ANY'=>book_list_api, 'POST'=>book_create_api}
         end
       end
@@ -225,7 +225,7 @@ Oktest.scope do
           ".gsub(/\s+/, '')
           #_.ok {@urlpath_rexp} == Regexp.new(expected)
           _.ok {@urlpath_rexp} == %r`\A/a(?:pi/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))|dmin/books/#{id}(\z))\z`
-          _.ok {@fixed_entrypoints} == {
+          _.ok {@fixed_endpoints} == {
             '/'                => welcome_app,
             '/index.html'      => welcome_app,
             '/api/books'       => book_list_api,
@@ -235,7 +235,7 @@ Oktest.scope do
               'POST'=>admin_book_create_app,
             },
           }
-          _.ok {@variable_entrypoints} == [
+          _.ok {@variable_endpoints} == [
             [%r'\A/api/books/([^./?]+)\z',      ['id'], book_show_api, (11..-1)],
             [%r'\A/api/books/([^./?]+)/edit\z', ['id'], book_edit_api, (11..-6)],
             [%r'\A/api/books/([^./?]+)/comments\z',          ['book_id'], comment_create_api, (11..-10)],
@@ -253,8 +253,8 @@ Oktest.scope do
         ]
         router = Rack::JetRouter.new(mapping)
         router.instance_exec(self) do |_|
-          dict = @fixed_entrypoints
-          list = @variable_entrypoints
+          dict = @fixed_endpoints
+          list = @variable_endpoints
           rexp = @urlpath_rexp
           _.ok {dict} == {'/api/books' => book_list_api}
           _.ok {list} == []
@@ -296,13 +296,13 @@ Oktest.scope do
         mapping = [
           ['/api/books/:id', book_show_api],
         ]
-        r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
+        r = Rack::JetRouter.new(mapping, cache_size: 3)
         pair = r.lookup('/api/books/123')
         ok {pair} == [book_show_api, {"id"=>"123"}]
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {'/api/books/123'=>pair}
+          _.ok {@cache_dict} == {'/api/books/123'=>pair}
           #
-          @variable_urlpath_cache['/api/books/999'] = [book_list_api, {"ID"=>"111"}]
+          @cache_dict['/api/books/999'] = [book_list_api, {"ID"=>"111"}]
         end
         pair = r.lookup('/api/books/999')
         ok {pair} == [book_list_api, {"ID"=>"111"}]
@@ -312,13 +312,13 @@ Oktest.scope do
         mapping = [
           ['/books/:id', book_show_api],
         ]
-        r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
+        r = Rack::JetRouter.new(mapping, cache_size: 3)
         #
         pair1 = r.lookup('/books/1'); ok {pair1} == [book_show_api, {"id"=>"1"}]
         pair2 = r.lookup('/books/2'); ok {pair2} == [book_show_api, {"id"=>"2"}]
         pair3 = r.lookup('/books/3'); ok {pair3} == [book_show_api, {"id"=>"3"}]
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/1'=>pair1,
             '/books/2'=>pair2,
             '/books/3'=>pair3,
@@ -327,7 +327,7 @@ Oktest.scope do
         #
         pair4 = r.lookup('/books/4'); ok {pair4} == [book_show_api, {"id"=>"4"}]
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/2'=>pair2,
             '/books/3'=>pair3,
             '/books/4'=>pair4,
@@ -339,14 +339,14 @@ Oktest.scope do
         mapping = [
           ['/books/:id', book_show_api],
         ]
-        r = Rack::JetRouter.new(mapping, urlpath_cache_size: 3)
+        r = Rack::JetRouter.new(mapping, cache_size: 3)
         #
         pair1 = r.lookup('/books/1')
         pair2 = r.lookup('/books/2')
         pair3 = r.lookup('/books/3')
         pair4 = r.lookup('/books/4')
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/2'=>pair2,
             '/books/3'=>pair3,
             '/books/4'=>pair4,
@@ -355,7 +355,7 @@ Oktest.scope do
         #
         ok {r.lookup('/books/3')} == pair3
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/2'=>pair2,
             '/books/4'=>pair4,
             '/books/3'=>pair3,
@@ -364,7 +364,7 @@ Oktest.scope do
         #
         ok {r.lookup('/books/1')} == pair1
         r.instance_exec(self) do |_|
-          _.ok {@variable_urlpath_cache} == {
+          _.ok {@cache_dict} == {
             '/books/4'=>pair4,
             '/books/3'=>pair3,
             '/books/1'=>pair1,
