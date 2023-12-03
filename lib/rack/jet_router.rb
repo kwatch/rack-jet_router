@@ -91,16 +91,6 @@ module Rack
       @cache_size = cache_size
       @cache_dict = cache_size > 0 ? {} : nil
       ##
-      ## Endpoints without any path parameters.
-      ## ex:
-      ##   {
-      ##     "/"           => home_app,
-      ##     "/api/books"  => books_app,
-      ##     "/api/orders" => orders_app,
-      ##   }
-      ##
-      @fixed_endpoints = {}
-      ##
       ## Pair list of endpoint and Rack app.
       ## ex:
       ##   [
@@ -111,13 +101,16 @@ module Rack
       ##   ]
       ##
       @all_endpoints = []
-      #; [!u2ff4] compiles urlpath mapping.
-      builder = Builder.new(self, enable_range)
-      tree = builder.build_tree(mapping) do |path, item, has_param|
-        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        @fixed_endpoints[path] = item unless has_param
-        @all_endpoints << [path, item]
-      end
+      ##
+      ## Endpoints without any path parameters.
+      ## ex:
+      ##   {
+      ##     "/"           => home_app,
+      ##     "/api/books"  => books_app,
+      ##     "/api/orders" => orders_app,
+      ##   }
+      ##
+      @fixed_endpoints = {}
       ##
       ## Endpoints with one or more path parameters.
       ## ex:
@@ -126,12 +119,22 @@ module Rack
       ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
       ##   ]
       ##
-      @variable_endpoints = tuples = []
+      @variable_endpoints = []
       ##
       ## Combined regexp of variable endpoints.
       ## ex:
       ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
       ##
+      @urlpath_rexp = nil
+      #
+      #; [!u2ff4] compiles urlpath mapping.
+      builder = Builder.new(self, enable_range)
+      tree = builder.build_tree(mapping) do |path, item, has_param|
+        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        @fixed_endpoints[path] = item unless has_param
+        @all_endpoints << [path, item]
+      end
+      tuples = @variable_endpoints
       @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
     end
 
