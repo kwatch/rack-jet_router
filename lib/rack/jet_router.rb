@@ -301,14 +301,14 @@ module Rack
     ## Returns regexp string of path parameter. Override if necessary.
     ## ex:
     ##     module OverridingJetRouter
-    ##       def param_pattern(param)
+    ##       def param2rexp(param)
     ##         return '\d+' if param == "id" || param =~ /_id\z/   # !!!
     ##         return super
     ##       end
     ##     end
     ##     Rack::JetRouter.prepend(OverridingJetRouter)
-    def param_pattern(param)   # called from Builder class
-      #; [!6sd9b] converts regexp string according to param name.
+    def param2rexp(param)   # called from Builder class
+      #; [!6sd9b] returns regexp string according to param name.
       #return '\d+' if param == "id" || param =~ /_id\z/
       return '[^./?]+'
     end
@@ -459,7 +459,7 @@ module Rack
         if param
           optional == nil  or raise "** internal error"
           yield param
-          pat1 = _param_pattern(param)
+          pat1 = _param2rexp(param)     # ex: '[^./?]+'
           pat2 = "(#{pat1})"
         #; [!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'.
         elsif optional == ".:format"
@@ -470,7 +470,7 @@ module Rack
         elsif optional
           sb = ['(?:']
           optional.scan(/(.*?)(?::(\w+))/) do |str, param_|
-            pat = _param_pattern(param)               # ex: pat == '[^./?]+'
+            pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
             sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
             yield param_
           end
@@ -485,8 +485,8 @@ module Rack
         return pat1, pat2
       end
 
-      def _param_pattern(param)
-        return @router.param_pattern(param)    # ex: '[^./?]+'
+      def _param2rexp(param)
+        return @router.param2rexp(param)    # ex: '[^./?]+'
       end
 
       def build_rexp(tree, &callback)
