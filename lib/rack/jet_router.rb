@@ -130,7 +130,7 @@ module Rack
       #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, _enable_range)
       param_rexp = /[:*]\w+|\(.*?\)/
-      tmplist = []
+      pairs = []    # ex: [["/api/books/:id", book_app], ["/api/orders/:id", order_app]]
       min_index = 999
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
@@ -151,26 +151,21 @@ module Rack
               @fixed_endpoints[$1 + s] = item
             end
           end
-          tmplist << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
+          pairs << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
           min_index = index if index < min_index
         else
-          tmplist << [path, item]
+          pairs << [path, item]
           min_index = index if index < min_index
         end
       end
       #; [!u2ff4] compiles urlpath mapping and generates subrouters.
-      min_index = 0 if tmplist.empty?
+      min_index = 0 if pairs.empty?
       @prefix_range = (0...min_index)
-      tmpdict = {}
-      tmplist.each do |path, item|
-        prefix = path[@prefix_range]
-        (tmpdict[prefix] ||= []) << [path, item]
-      end
-      tmpdict.each do |prefix, pairs|
-        @variable_endpoints[prefix] = builder.build_subrouter(pairs)
+      pairs.group_by {|path, _| path[@prefix_range] }.each do |prefix, pairs_|
+        @variable_endpoints[prefix] = builder.build_subrouter(pairs_)
       end
       @variable_endpoints[""] ||= builder.build_subrouter([])
-      tmplist.clear(); tmpdict.clear()
+      pairs.clear()
     end
 
     attr_reader :urlpath_rexp
