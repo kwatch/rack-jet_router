@@ -255,8 +255,9 @@ module Rack
     end
 
     ## Stores urlpath parameter values into `env['rack.urlpath_params']`. Override if necessary.
-    def store_param_values(env, vars)
-      env['rack.urlpath_params'] = vars if vars
+    def store_param_values(env, values)
+      #; [!94riv] stores urlpath param values into `env['rack.urlpath_params]`.
+      env['rack.urlpath_params'] = values if values
     end
 
     ## Returns Hash object representing urlpath parameter values. Override if necessary.
