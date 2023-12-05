@@ -87,9 +87,13 @@ module Rack
     REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
-    def initialize(mapping, cache_size: 0, enable_range: true)
-      @cache_size = cache_size
-      @cache_dict = cache_size > 0 ? {} : nil
+    def initialize(mapping, cache_size: 0,
+                            urlpath_cache_size: 0,   # for backward compatibility
+                            _enable_range: true)     # undocumentend keyword arg
+      #; [!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility.
+      @cache_size = [cache_size, urlpath_cache_size].max()
+      #; [!5tw57] cache is disabled when 'cache_size:' is zero.
+      @cache_dict = @cache_size > 0 ? {} : nil
       ##
       ## Pair list of endpoint and Rack app.
       ## ex:
@@ -127,18 +131,21 @@ module Rack
       ##
       @urlpath_rexp = nil
       #
-      #; [!u2ff4] compiles urlpath mapping.
-      builder = Builder.new(self, enable_range)
+      #; [!x2l32] gathers all endpoints.
+      builder = Builder.new(self, _enable_range)
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
-        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        has_param = (path =~ /:\w+|\(.*?\)/)
-        @fixed_endpoints[path] = item unless has_param
       end
-      endpoints = @all_endpoints.select {|path, _| ! @fixed_endpoints.key?(path) }
-      tree = builder.build_tree(endpoints)
-      tuples = @variable_endpoints
-      @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
+      #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+      param_rexp = /:\w+|\(.*?\)/
+      pairs1, pairs2 = @all_endpoints.partition {|path, _| path =~ param_rexp }
+      pairs2.each {|path, item| @fixed_endpoints[path] = item }
+      #; [!saa1a] compiles compound urlpath regexp.
+      tree = builder.build_tree(pairs1)
+      @urlpath_rexp = builder.build_rexp(tree) do |tuple|
+        #; [!f1d7s] builds variable endpoint list.
+        @variable_endpoints << tuple
+      end
     end
 
     attr_reader :urlpath_rexp

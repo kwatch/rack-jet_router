@@ -202,29 +202,55 @@ Oktest.scope do
 
     topic '#initialize()' do
 
-      spec "[!u2ff4] compiles urlpath mapping." do
+      spec "[!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility." do
+        r = Rack::JetRouter.new([], urlpath_cache_size: 5)
+        ok {r.instance_variable_get(:@cache_size)} == 5
+        ok {r.instance_variable_get(:@cache_dict)} == {}
+        #
+        r = Rack::JetRouter.new([], cache_size: 7)
+        ok {r.instance_variable_get(:@cache_size)} == 7
+        ok {r.instance_variable_get(:@cache_dict)} == {}
+      end
+
+      spec "[!5tw57] cache is disabled when 'cache_size:' is zero." do
+        r = Rack::JetRouter.new([], cache_size: 0)
+        ok {r.instance_variable_get(:@cache_size)} == 0
+        ok {r.instance_variable_get(:@cache_dict)} == nil
+        #
+        r = Rack::JetRouter.new([], urlpath_cache_size: 0)
+        ok {r.instance_variable_get(:@cache_size)} == 0
+        ok {r.instance_variable_get(:@cache_dict)} == nil
+        #
+        r = Rack::JetRouter.new([])
+        ok {r.instance_variable_get(:@cache_size)} == 0
+        ok {r.instance_variable_get(:@cache_dict)} == nil
+      end
+
+      spec "[!x2l32] gathers all endpoints." do
+        all = @router.instance_eval { @all_endpoints }
+        ok {all} == [
+          ["/"                  , welcome_app],
+          ["/index.html"        , welcome_app],
+          ["/api/books"         , book_list_api],
+          ["/api/books/new"     , book_new_api],
+          ["/api/books/:id"     , book_show_api],
+          ["/api/books/:id/edit", book_edit_api],
+          ["/api/books/:book_id/comments"            , comment_create_api],
+          ["/api/books/:book_id/comments/:comment_id", comment_update_api],
+          ["/admin/books", {
+             "GET"    => admin_book_list_app,
+             "POST"   => admin_book_create_app,
+           }],
+          ["/admin/books/:id", {
+             "GET"    => admin_book_show_app,
+             "PUT"    => admin_book_update_app,
+             "DELETE" => admin_book_delete_app,
+           }],
+        ]
+      end
+
+      spec "[!l63vu] handles urlpath pattern as fixed when no urlpath params." do
         @router.instance_exec(self) do |_|
-          id = '[^./?]+'
-          expected = "
-              \A
-              (?:
-                  /api
-                      (?:
-                          /books
-                              (?:/#{id}(\z)|/#{id}/edit(\z))
-                      |
-                          /books/#{id}/comments
-                              (?:(\z)|/#{id}(\z))
-                      )
-              |
-                  /admin
-                      /books
-                          /#{id}(\z)
-              )
-              \z
-          ".gsub(/\s+/, '')
-          #_.ok {@urlpath_rexp} == Regexp.new(expected)
-          _.ok {@urlpath_rexp} == %r`\A/a(?:pi/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))|dmin/books/#{id}(\z))\z`
           _.ok {@fixed_endpoints} == {
             '/'                => welcome_app,
             '/index.html'      => welcome_app,
@@ -233,32 +259,41 @@ Oktest.scope do
             '/admin/books'     => {
               'GET'=>admin_book_list_app,
               'POST'=>admin_book_create_app,
-            },
+            }
           }
-          _.ok {@variable_endpoints} == [
-            [%r'\A/api/books/([^./?]+)\z',      ['id'], book_show_api, (11..-1)],
-            [%r'\A/api/books/([^./?]+)/edit\z', ['id'], book_edit_api, (11..-6)],
-            [%r'\A/api/books/([^./?]+)/comments\z',          ['book_id'], comment_create_api, (11..-10)],
-            [%r'\A/api/books/([^./?]+)/comments/([^./?]+)\z', ['book_id', 'comment_id'], comment_update_api, nil],
-            [%r'\A/admin/books/([^./?]+)\z',    ['id'], {'GET'    => admin_book_show_app,
-                                                        'PUT'    => admin_book_update_app,
-                                                        'DELETE' => admin_book_delete_app}, (13..-1)],
-          ]
         end
-      end
-
-      spec "[!l63vu] handles urlpath pattern as fixed when no urlpath params." do
+        #
         mapping = [
           ['/api/books'      , book_list_api],
         ]
         router = Rack::JetRouter.new(mapping)
         router.instance_exec(self) do |_|
-          dict = @fixed_endpoints
-          list = @variable_endpoints
-          rexp = @urlpath_rexp
-          _.ok {dict} == {'/api/books' => book_list_api}
-          _.ok {list} == []
-          _.ok {rexp} == /\A\z/
+          _.ok {@fixed_endpoints} == {'/api/books' => book_list_api}
+          _.ok {@variable_endpoints} == []
+        end
+      end
+
+      spec "[!saa1a] compiles compound urlpath regexp." do
+        id = '[^./?]+'
+        z  = '(\z)'
+        ok {@router.urlpath_rexp} == %r!\A/a(?:pi/books/#{id}(?:#{z}|/(?:edit#{z}|comments(?:#{z}|/#{id}#{z})))|dmin/books/#{id}#{z})\z!
+      end
+
+      spec "[!f1d7s] builds variable endpoint list." do
+        id = '[^./?]+'
+        map2 = {
+          'GET'    => admin_book_show_app,
+          'PUT'    => admin_book_update_app,
+          'DELETE' => admin_book_delete_app,
+        }
+        @router.instance_exec(self) do |_|
+          _.ok {@variable_endpoints} == [
+            [%r'\A/api/books/(#{id})\z',      ['id'], book_show_api, (11..-1)],
+            [%r'\A/api/books/(#{id})/edit\z', ['id'], book_edit_api, (11..-6)],
+            [%r'\A/api/books/(#{id})/comments\z',          ['book_id'], comment_create_api, (11..-10)],
+            [%r'\A/api/books/(#{id})/comments/(#{id})\z', ['book_id', 'comment_id'], comment_update_api, nil],
+            [%r'\A/admin/books/(#{id})\z', ['id'], map2, (13..-1)],
+          ]
         end
       end
 
@@ -415,7 +450,7 @@ Oktest.scope do
         ok {@router.call(new_env(:GET, '/api/book'))} == expected
       end
 
-      topic "[!gclbs] if mapped object is a Hash..." do
+      case_when "[!gclbs] if mapped object is a Hash..." do
 
         spec "[!p1fzn] invokes app mapped to request method." do
           ok {@router.call(new_env(:GET,    '/admin/books'))}     == [200, {}, ["admin_book_list_app"]]
