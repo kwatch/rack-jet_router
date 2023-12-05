@@ -555,6 +555,35 @@ Oktest.scope do
     end
 
 
+    topic '#build_param_values()' do
+
+      case_when "[!qxcis] when 'id_int: true' is specified to constructor..." do
+
+        spec "[!l6p84] converts urlpath pavam value into integer." do
+          router = Rack::JetRouter.new([], id_int: true)
+          router.instance_exec(self) do |_|
+            ret = build_param_values(["id", "name"], ["123", "foo"])
+            _.ok {ret} == {"id" => 123, "name" => "foo"}
+          end
+        end
+
+      end
+
+      case_when "[!vrbo5] else..." do
+
+        spec "[!yc9n8] creates new Hash object from param names and values." do
+          router = Rack::JetRouter.new([])
+          router.instance_exec(self) do |_|
+            ret = build_param_values(["id", "name"], ["123", "foo"])
+            _.ok {ret} == {"id" => "123", "name" => "foo"}
+          end
+        end
+
+      end
+
+    end
+
+
     topic '#id_param?()' do
 
       spec "[!ree3r] returns true if param name is 'id' or 'xxx_id'." do

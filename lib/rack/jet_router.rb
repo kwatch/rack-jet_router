@@ -291,7 +291,19 @@ module Rack
     ##     end
     ##     Rack::JetRouter.prepend(OverridingJetRouter)
     def build_param_values(names, values)
-      return Hash[names.zip(values)]
+      #; [!qxcis] when 'id_int: true' is specified to constructor...
+      if @id_int
+        #; [!l6p84] converts urlpath pavam value into integer.
+        d = {}
+        for name, val in names.zip(values)
+          d[name] = id_param?(name) ? val.to_i : val
+        end
+        return d
+      #; [!vrbo5] else...
+      else
+        #; [!yc9n8] creates new Hash object from param names and values.
+        return Hash[names.zip(values)]
+      end
     end
 
     def id_param?(param)
