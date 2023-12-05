@@ -39,21 +39,13 @@ Oktest.scope do
     topic '#build_tree()' do
 
       spec "[!6oa05] builds nested hash object from mapping data." do
-        mapping = [
-          ['/api'           , [
-            ['/books'       , [
-              [''           , book_list_api],
-              ['/new'       , book_new_api],
-              ['/:id'       , book_show_api],
-              ['/:id/edit'  , book_edit_api],
-            ]],
-            ['/books/:book_id/comments', [
-              [''             , comment_create_api],
-              ['/:comment_id' , comment_update_api],
-            ]],
-          ]],
+        endpoint_pairs = [
+          ['/api/books/:id'     , book_show_api],
+          ['/api/books/:id/edit', book_edit_api],
+          ['/api/books/:book_id/comments'            , comment_create_api],
+          ['/api/books/:book_id/comments/:comment_id', comment_update_api],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
@@ -81,64 +73,12 @@ Oktest.scope do
         }
       end
 
-      spec "[!j0pes] if item is a hash object, converts keys from symbol to string." do
-        mapping = [
-          ['/api'           , [
-            ['/books'       , [
-              ['/new'       , {GET: book_new_api}],
-              ['/:id'       , {GET: book_show_api, DELETE: book_delete_api}],
-            ]],
-          ]],
-        ]
-        actuals = []
-        dict = @builder.build_tree(mapping) {|path, item, _| actuals << [path, item] }
-        ok {actuals} == [
-          ["/api/books/new", {"GET"=>book_new_api}],
-          ["/api/books/:id", {"GET"=>book_show_api, "DELETE"=>book_delete_api}],
-        ]
-        id = '[^./?]+'
-        #expected_map = {:GET=>book_show_api, :DELETE=>book_delete_api}
-        expected_map = {"GET"=>book_show_api, "DELETE"=>book_delete_api}
-        ok {dict} == {
-          "/api/books/" => {
-            :"[^./?]+"=> {
-              nil => [/\A\/api\/books\/(#{id})\z/,
-                      ["id"], expected_map, (11..-1)],
-            },
-          },
-        }
-      end
-
-      spec "[!vfytw] handles urlpath pattern as variable when urlpath param exists." do
-        mapping = [
-          ['/api', [
-            ['/books', [
-              ['/new'       , {GET: book_new_api}],
-              ['/:id'       , {GET: book_show_api}],
-            ]],
-          ]],
-        ]
-        actuals = []
-        dict = @builder.build_tree(mapping) {|path, _, fixed_p|
-          actuals << [path, fixed_p]
-        }
-        id = '[^./?]+'
-        ok {actuals} == [
-          ["/api/books/new", false],
-          ["/api/books/:id", true],
-        ]
-      end
-
       spec "[!uyupj] handles urlpath parameter such as ':id'." do
-        mapping = [
-          ['/api', [
-            ['/books/:book_id/comments', [
-              [''           , {POST: comment_create_api}],
-              ['/:id'       , {PUT: comment_update_api}],
-            ]],
-          ]],
+        endpoint_pairs = [
+          ["/api/books/:book_id/comments"    , {"POST"=>comment_create_api}],
+          ["/api/books/:book_id/comments/:id", {"PUT"=>comment_update_api}],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
@@ -159,18 +99,11 @@ Oktest.scope do
       end
 
       spec "[!j9cdy] handles optional urlpath parameter such as '(.:format)'." do
-        mapping = [
-          ['/api', [
-            ['/books', [
-              ['(.:format)'           , {GET: book_list_api}],
-              ['/:id(.:format)'       , {GET: book_show_api}],
-            ]],
-          ]],
+        endpoint_pairs = [
+          ["/api/books(.:format)"    , {"GET"=>book_list_api}],
+          ["/api/books/:id(.:format)", {"GET"=>book_show_api}],
         ]
-        actuals = []
-        dict = @builder.build_tree(mapping) do |path, item, fixed_p|
-          actuals << [path, item, fixed_p]
-        end
+        dict = @builder.build_tree(endpoint_pairs)
         id = '[^./?]+'
         ok {dict} == {
           "/api/books" => {
@@ -190,50 +123,48 @@ Oktest.scope do
       end
 
       spec "[!akkkx] converts urlpath param into regexp." do
-        mapping = [
+        endpoint_pairs = [
           ["/api/books/:id", book_show_api],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple[0]} == %r`\A/api/books/(#{id})\z`
       end
 
       spec "[!po6o6] param regexp should be stored into nested dict as a Symbol." do
-        mapping = [
+        endpoint_pairs = [
           ["/api/books/:id", book_show_api],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         ok {dict["/api/books/"].keys()} == [:'[^./?]+']
       end
 
       spec "[!zoym3] urlpath string should be escaped." do
-        mapping = [
+        endpoint_pairs = [
           ["/api/books.dir.tmp/:id.tar.gz", book_show_api],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple[0]} == %r`\A/api/books\.dir\.tmp/(#{id})\.tar\.gz\z`
       end
 
       spec "[!o642c] remained string after param should be handled correctly." do
-        mapping = [
-          ["/api/books", [
-            ["/:id(.:format)(.gz)", book_show_api],
-          ]],
+        endpoint_pairs = [
+          ["/api/books/:id(.:format)(.gz)", book_show_api],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple[0]} == %r`\A/api/books/(#{id})(?:\.(#{id}))?(?:\.gz)?\z`
       end
 
       spec "[!kz8m7] range object should be included into tuple if only one param exist." do
-        mapping = [
+        endpoint_pairs = [
           ["/api/books/:id.json", book_show_api],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple} == [%r`\A/api/books/(#{id})\.json\z`,
@@ -241,10 +172,10 @@ Oktest.scope do
       end
 
       spec "[!c6xmp] tuple should be stored into nested dict with key 'nil'." do
-        mapping = [
+        endpoint_pairs = [
           ["/api/books/:id.json", book_show_api],
         ]
-        dict = @builder.build_tree(mapping)
+        dict = @builder.build_tree(endpoint_pairs)
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
@@ -258,28 +189,10 @@ Oktest.scope do
         }
       end
 
-      spec "[!gls5k] yields callback if given." do
-        mapping = [
-          ['/api', [
-            ['/books', [
-              ['/new'       , book_new_api],
-              ['/:id'       , book_show_api],
-            ]],
-          ]],
-        ]
-        actuals = []
-        dict = @builder.build_tree(mapping) {|*args| actuals << args }
-        id = '[^./?]+'
-        ok {actuals} == [
-          ["/api/books/new", book_new_api , false],
-          ["/api/books/:id", book_show_api, true],
-        ]
-      end
-
     end
 
 
-    topic '#_traverse_mapping()' do
+    topic '#traverse_mapping()' do
 
       spec "[!9s3f0] supports both nested list mapping and nested dict mapping." do
         expected = [
@@ -298,9 +211,7 @@ Oktest.scope do
           ]],
         ]
         actuals1 = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping1, "", mapping1.class) {|*args| actuals1 << args }
-        end
+        @builder.traverse_mapping(mapping1) {|*args| actuals1 << args }
         ok {actuals1} == expected
         #
         mapping2 = {
@@ -313,9 +224,7 @@ Oktest.scope do
           },
         }
         actuals2 = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping2, "", mapping2.class) {|*args| actuals2 << args }
-        end
+        @builder.traverse_mapping(mapping2) {|*args| actuals2 << args }
         ok {actuals2} == expected
       end
 
@@ -334,13 +243,11 @@ Oktest.scope do
           },
         }
         actuals = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
-        end
+        @builder.traverse_mapping(mapping) {|*args| actuals << args }
         ok {actuals} == [
-          ["/api/books"    , Map(GET: book_list_api)],
-          ["/api/books/new", Map(GET: book_new_api) ],
-          ["/api/books/:id", Map(GET: book_show_api, PUT: book_edit_api)],
+          ["/api/books"    , Map.new.update("GET"=>book_list_api)],
+          ["/api/books/new", Map.new.update("GET"=>book_new_api) ],
+          ["/api/books/:id", Map.new.update("GET"=>book_show_api, "PUT"=>book_edit_api)],
         ]
       end
 
@@ -360,9 +267,7 @@ Oktest.scope do
           ]],
         ]
         actuals = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
-        end
+        @builder.traverse_mapping(mapping) {|*args| actuals << args }
         ok {actuals} ==  [
           ["/api/books"         , book_list_api],
           ["/api/books/new"     , book_new_api],
@@ -370,6 +275,23 @@ Oktest.scope do
           ["/api/books/:id/edit", book_edit_api],
           ["/api/books/:book_id/comments"            , comment_create_api],
           ["/api/books/:book_id/comments/:comment_id", comment_update_api],
+        ]
+      end
+
+      spec "[!j0pes] if item is a hash object, converts keys from symbol to string." do
+        mapping = [
+          ['/api'           , [
+            ['/books'       , [
+              ['/new'       , {GET: book_new_api}],
+              ['/:id'       , {GET: book_show_api, DELETE: book_delete_api}],
+            ]],
+          ]],
+        ]
+        actuals = []
+        @builder.traverse_mapping(mapping) {|path, item| actuals << [path, item] }
+        ok {actuals} == [
+          ["/api/books/new", {"GET"=>book_new_api}],
+          ["/api/books/:id", {"GET"=>book_show_api, "DELETE"=>book_delete_api}],
         ]
       end
 
@@ -389,9 +311,7 @@ Oktest.scope do
           },
         }
         actuals = []
-        @builder.instance_eval do
-          _traverse_mapping(mapping, "", mapping.class) {|*args| actuals << args }
-        end
+        @builder.traverse_mapping(mapping) {|*args| actuals << args }
         ok {actuals} ==  [
           ["/api/books"         , book_list_api],
           ["/api/books/new"     , book_new_api],

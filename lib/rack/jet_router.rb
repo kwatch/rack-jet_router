@@ -91,16 +91,6 @@ module Rack
       @cache_size = cache_size
       @cache_dict = cache_size > 0 ? {} : nil
       ##
-      ## Endpoints without any path parameters.
-      ## ex:
-      ##   {
-      ##     "/"           => home_app,
-      ##     "/api/books"  => books_app,
-      ##     "/api/orders" => orders_app,
-      ##   }
-      ##
-      @fixed_endpoints = {}
-      ##
       ## Pair list of endpoint and Rack app.
       ## ex:
       ##   [
@@ -111,13 +101,16 @@ module Rack
       ##   ]
       ##
       @all_endpoints = []
-      #; [!u2ff4] compiles urlpath mapping.
-      builder = Builder.new(self, enable_range)
-      tree = builder.build_tree(mapping) do |path, item, has_param|
-        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        @fixed_endpoints[path] = item unless has_param
-        @all_endpoints << [path, item]
-      end
+      ##
+      ## Endpoints without any path parameters.
+      ## ex:
+      ##   {
+      ##     "/"           => home_app,
+      ##     "/api/books"  => books_app,
+      ##     "/api/orders" => orders_app,
+      ##   }
+      ##
+      @fixed_endpoints = {}
       ##
       ## Endpoints with one or more path parameters.
       ## ex:
@@ -126,12 +119,25 @@ module Rack
       ##     [%r!\A/api/orders/([^./?]+)\z!, ["id"], order_app, (12..-1)],
       ##   ]
       ##
-      @variable_endpoints = tuples = []
+      @variable_endpoints = []
       ##
       ## Combined regexp of variable endpoints.
       ## ex:
       ##   %r!\A/api/(?:books/[^./?]+(\z)|orders/[^./?]+(\z))\z!
       ##
+      @urlpath_rexp = nil
+      #
+      #; [!u2ff4] compiles urlpath mapping.
+      builder = Builder.new(self, enable_range)
+      builder.traverse_mapping(mapping) do |path, item|
+        @all_endpoints << [path, item]
+        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        has_param = (path =~ /:\w+|\(.*?\)/)
+        @fixed_endpoints[path] = item unless has_param
+      end
+      endpoints = @all_endpoints.select {|path, _| ! @fixed_endpoints.key?(path) }
+      tree = builder.build_tree(endpoints)
+      tuples = @variable_endpoints
       @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
     end
 
@@ -323,55 +329,9 @@ module Rack
         @enable_range = enable_range
       end
 
-      def build_tree(mapping, &callback)
-        block_given_p = block_given?()
-        #; [!6oa05] builds nested hash object from mapping data.
-        tree = {}         # tree is a nested dict
-        param_d = {}
-        _traverse_mapping(mapping, "", mapping.class) do |path, item|
-          #; [!j0pes] if item is a hash object, converts keys from symbol to string.
-          item = _normalize_method_mapping(item) if item.is_a?(Hash)
-          #; [!vfytw] handles urlpath pattern as variable when urlpath param exists.
-          has_param = (path =~ /:\w|\(.*?\)/)
-          if has_param
-            d = tree
-            sb = ['\A']
-            pos = 0
-            params = []
-            #; [!uyupj] handles urlpath parameter such as ':id'.
-            #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
-            path.scan(/:(\w+)|\((.*?)\)/) do
-              param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
-              m = Regexp.last_match()
-              str = path[pos, m.begin(0) - pos]
-              pos = m.end(0)
-              #; [!akkkx] converts urlpath param into regexp.
-              pat1, pat2 = _param_patterns(param, optional) do |param_|
-                param_.freeze
-                params << (param_d[param_] ||= param_)
-              end
-              #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
-              d = _next_dict(d, str) unless str.empty?
-              d = (d[pat1.intern] ||= {})       # ex: pat1=='[^./?]+'
-              #; [!zoym3] urlpath string should be escaped.
-              sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
-            end
-            #; [!o642c] remained string after param should be handled correctly.
-            str = pos == 0 ? path : path[pos..-1]
-            unless str.empty?
-              d = _next_dict(d, str)
-              sb << Regexp.escape(str)          # ex: str=='.html'
-            end
-            sb << '\z'
-            #; [!kz8m7] range object should be included into tuple if only one param exist.
-            range = @enable_range ? _range_of_urlpath_param(path) : nil
-            #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
-            d[nil] = [Regexp.compile(sb.join()), params, item, range]
-          end
-          #; [!gls5k] yields callback if given.
-          yield path, item, !! has_param if block_given_p
-        end
-        return tree
+      def traverse_mapping(mapping, &block)
+        _traverse_mapping(mapping, "", mapping.class, &block)
+        nil
       end
 
       private
@@ -385,11 +345,63 @@ module Rack
             #; [!dj0sh] traverses mapping recursively.
             _traverse_mapping(item, full_path, mapping_class, &block)
           else
+            #; [!j0pes] if item is a hash object, converts keys from symbol to string.
+            item = _normalize_method_mapping(item) if item.is_a?(Hash)
             #; [!brhcs] yields block for each full path and handler.
             yield full_path, item
           end
         end
       end
+
+      def _normalize_method_mapping(dict)
+        return @router.normalize_method_mapping(dict)
+      end
+
+      public
+
+      def build_tree(entrypoint_pairs)
+        #; [!6oa05] builds nested hash object from mapping data.
+        tree = {}         # tree is a nested dict
+        param_d = {}
+        entrypoint_pairs.each do |path, item|
+          d = tree
+          sb = ['\A']
+          pos = 0
+          params = []
+          #; [!uyupj] handles urlpath parameter such as ':id'.
+          #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
+          path.scan(/:(\w+)|\((.*?)\)/) do
+            param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
+            m = Regexp.last_match()
+            str = path[pos, m.begin(0) - pos]
+            pos = m.end(0)
+            #; [!akkkx] converts urlpath param into regexp.
+            pat1, pat2 = _param_patterns(param, optional) do |param_|
+              param_.freeze
+              params << (param_d[param_] ||= param_)
+            end
+            #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
+            d = _next_dict(d, str) unless str.empty?
+            d = (d[pat1.intern] ||= {})       # ex: pat1=='[^./?]+'
+            #; [!zoym3] urlpath string should be escaped.
+            sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
+          end
+          #; [!o642c] remained string after param should be handled correctly.
+          str = pos == 0 ? path : path[pos..-1]
+          unless str.empty?
+            d = _next_dict(d, str)
+            sb << Regexp.escape(str)          # ex: str=='.html'
+          end
+          sb << '\z'
+          #; [!kz8m7] range object should be included into tuple if only one param exist.
+          range = @enable_range ? _range_of_urlpath_param(path) : nil
+          #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
+          d[nil] = [Regexp.compile(sb.join()), params, item, range]
+        end
+        return tree
+      end
+
+      private
 
       def _next_dict(d, str)
         #; [!s1rzs] if new key exists in dict...
@@ -491,6 +503,8 @@ module Rack
         return @router.param2rexp(param)    # ex: '[^./?]+'
       end
 
+      public
+
       def build_rexp(tree, &callback)
         #; [!65yw6] converts nested dict into regexp.
         sb = ['\A']
@@ -498,7 +512,8 @@ module Rack
         sb << '\z'
         return Regexp.compile(sb.join())
       end
-      public :build_rexp
+
+      private
 
       def _build_rexp(nested_dict, sb, &b)
         #; [!hs7vl] '(?:)' and '|' are added only if necessary.
@@ -526,10 +541,6 @@ module Rack
         arr = urlpath_pattern.split(rexp, -1)          # ex: ['/books/', '/edit']
         return nil unless arr.length == 2
         return (arr[0].length .. -(arr[1].length+1))   # ex: 7..-6  (Range object)
-      end
-
-      def _normalize_method_mapping(dict)
-        return @router.normalize_method_mapping(dict)
       end
 
     end
