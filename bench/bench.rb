@@ -19,6 +19,13 @@ flag_sinatra     = defined?(Sinatra)
 flag_keight      = defined?(K8)
 flag_hanami      = defined?(Hanami::Router)
 
+puts "** rack            : #{!flag_rack      ? '-' : Rack.release}"
+puts "** rack-jet_router : #{!flag_jetrouter ? '-' : Rack::JetRouter::RELEASE}"
+puts "** rack-multiplexer: #{!flag_multiplex ? '-' : Rack::Multiplexer::VERSION}"
+puts "** sinatra         : #{!flag_sinatra   ? '-' : Sinatra::VERSION}"
+puts "** keight          : #{!flag_keight    ? '-' : K8::RELEASE}"
+puts "** hanami-router   : #{!flag_hanami    ? '-' : Hanami::Router::VERSION}"
+
 
 ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
 
@@ -194,6 +201,11 @@ if flag_hanami
 end
 
 
+begin
+  Rack::MockRequest
+rescue
+  require 'rack'
+end
 $environ = Rack::MockRequest.env_for("http://localhost/", method: 'GET')
 $environ.freeze
 
@@ -209,12 +221,6 @@ title = "Router library benchmark"
 Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
   puts "** N=#{N}"
-  puts "** rack            : #{Rack.release rescue '-'}"               if flag_rack
-  puts "** rack-jet_router : #{Rack::JetRouter::RELEASE rescue '-'}"   if flag_jetrouter
-  puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION rescue '-'}" if flag_multiplex
-  puts "** sinatra         : #{Sinatra::VERSION rescue '-'}"           if flag_sinatra
-  puts "** keight          : #{K8::RELEASE rescue '-'}"                if flag_keight
-  puts "** hanami          : #{Hanami::Router::VERSION rescue '-'}"    if flag_hanami
   puts ""
 
   ### empty task
