@@ -85,23 +85,23 @@ end
 
 if flag_multiplex
 
-  class MpxHelloApp1
-    def call(env)
+  mpx_app = Rack::Multiplexer.new().tap do |app|
+    handler1 = proc {|env|
       [200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
-    end
-  end
-
-  class MpxHelloApp2
-    def call(env)
+    }
+    handler2 = proc {|env|
       d = env['rack.request.query_hash']
       [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d['id']}</h1>"]]
+    }
+    handler3 = proc {|env|
+      d = env['rack.request.query_hash']
+      [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d['id']}, comment_id=#{d['comment_id']}</h1>"]]
+    }
+    ENTRIES.each do |x|
+      app.get "/api/#{x}"     , handler1
+      app.get "/api/#{x}/:id" , handler2
+      app.get "/api/#{x}/:id/comments/:comment_id" , handler3
     end
-  end
-
-  mpx_app = Rack::Multiplexer.new()
-  ENTRIES.each do |x|
-    mpx_app.get "/api/#{x}"     , MpxHelloApp1.new
-    mpx_app.get "/api/#{x}/:id" , MpxHelloApp2.new
   end
 
 end
