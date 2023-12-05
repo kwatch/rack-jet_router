@@ -50,34 +50,36 @@ end
 
 if flag_jetrouter
 
-  class JetHelloApp1
-    def call(env)
+  jet_router = proc {
+    handler1 = proc {|env|
       [200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
-    end
-  end
-
-  class JetHelloApp2
-    def call(env)
+    }
+    handler2 = proc {|env|
       d = env['rack.urlpath_params']
       [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d['id']}</h1>"]]
-    end
-  end
-
-  jet_router = proc {
+    }
+    handler3 = proc {|env|
+      d = env['rack.urlpath_params']
+      [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d['id']}, comment_id=#{d['comment_id']}</h1>"]]
+    }
     mapping = [
-      ['/api', ENTRIES.map {|x|
-                 ["/#{x}", [
-                   ['',        JetHelloApp1.new],
-                   ['/:id',    JetHelloApp2.new],
-                 ]]
+      ['/api', ENTRIES.each_with_object([]) {|x, arr|
+                 arr << ["/#{x}", [
+                           ['',      handler1],
+                           ['/:id',  handler2],
+                         ]]
+                 arr << ["/#{x}/:id/comments", [
+                           ['/:comment_id',  handler3],
+                         ]]
                },
       ],
     ]
     opts = {
-      urlpath_cache_size:           ($k8cache || 0).to_i,
-      enable_urlpath_param_range:   $k8range != '0',
+      cache_size:     ($k8cache || 0).to_i,
+      _enable_range:  $k8range != '0',
+      #prefix_minlength_target: /\A\/api\/\w/,
     }
-    Rack::JetRouter.new(mapping, opts)
+    Rack::JetRouter.new(mapping, **opts)
   }.call()
 
 end
