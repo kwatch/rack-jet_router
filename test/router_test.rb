@@ -212,6 +212,20 @@ Oktest.scope do
         ok {r.instance_variable_get(:@cache_dict)} == {}
       end
 
+      spec "[!5tw57] cache is disabled when 'cache_size:' is zero." do
+        r = Rack::JetRouter.new([], cache_size: 0)
+        ok {r.instance_variable_get(:@cache_size)} == 0
+        ok {r.instance_variable_get(:@cache_dict)} == nil
+        #
+        r = Rack::JetRouter.new([], urlpath_cache_size: 0)
+        ok {r.instance_variable_get(:@cache_size)} == 0
+        ok {r.instance_variable_get(:@cache_dict)} == nil
+        #
+        r = Rack::JetRouter.new([])
+        ok {r.instance_variable_get(:@cache_size)} == 0
+        ok {r.instance_variable_get(:@cache_dict)} == nil
+      end
+
       spec "[!x2l32] gathers all endpoints." do
         all = @router.instance_eval { @all_endpoints }
         ok {all} == [

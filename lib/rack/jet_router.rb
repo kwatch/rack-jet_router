@@ -92,6 +92,7 @@ module Rack
                             _enable_range: true)     # undocumentend keyword arg
       #; [!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility.
       @cache_size = [cache_size, urlpath_cache_size].max()
+      #; [!5tw57] cache is disabled when 'cache_size:' is zero.
       @cache_dict = @cache_size > 0 ? {} : nil
       ##
       ## Pair list of endpoint and Rack app.
