@@ -23,27 +23,20 @@ ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
 
 if flag_rack
 
-  class RackApp1
-    def call(env)
-      [200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
-    end
+  rack_app1 = proc do |env|
+    [200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
   end
 
-  class RackApp4
-    def call(env)
-      req  = Rack::Request.new(env)
-      resp = Rack::Response.new
-      #[resp.status, resp.headers, ["<h1>hello</h1>"]]
-      #[200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
-      resp.status = 200
-      resp.headers["Content-Type"] = "text/html"
-      resp.write("<h1>hello</h1>")
-      resp.finish()
-    end
+  rack_app4 = proc do |env; req, resp|
+    req  = Rack::Request.new(env)
+    resp = Rack::Response.new
+    #[resp.status, resp.headers, ["<h1>hello</h1>"]]
+    #[200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
+    resp.status = 200
+    resp.headers["Content-Type"] = "text/html"
+    resp.write("<h1>hello</h1>")
+    resp.finish()
   end
-
-  rack_app1 = RackApp1.new
-  rack_app4 = RackApp4.new
 
 end
 
