@@ -19,10 +19,12 @@ Gem::Specification.new do |spec|
                          "README.md", "MIT-LICENSE", "CHANGES.md",
                          "#{spec.name}.gemspec",
                          "lib/**/*.rb", "test/**/*.rb",
+                         "bench/bench.rb", "bench/Gemfile", "bench/Rakefile.rb",
                        ]
-  spec.require_paths = ["lib"]
+  spec.require_path  = "lib"
+  spec.test_files    = Dir["test/**/*_test.rb"]   # or: ["test/run_all.rb"]
 
-  spec.required_ruby_version = '>= 2.3'
-  spec.add_development_dependency "minitest"
-  spec.add_development_dependency "minitest-ok"       , '~> 1'
+  spec.required_ruby_version = ">= 2.3"
+  spec.add_development_dependency "oktest"            , "~> 1"
+  spec.add_development_dependency "benchmarker"       , "~> 1"
 end
