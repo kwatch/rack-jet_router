@@ -3,15 +3,16 @@
 $LOAD_PATH << File.absolute_path("../../lib", __FILE__)
 
 require 'benchmarker'
+Benchmarker.parse_cmdopts()
 
-require 'rack'              rescue nil  unless $rack == '0'
-require 'rack/jet_router'   rescue nil  unless $jet  == '0'
-require 'rack/multiplexer'  rescue nil  unless $mpx  == '0'
-require 'sinatra/base'      rescue nil  unless $sina == '0'
-require 'keight'            rescue nil  unless $k8   == '0'
-require 'hanami/router'     rescue nil  unless $hanami == '0'
+require 'rack'              rescue nil  unless '0' == $opt_rack
+require 'rack/jet_router'   rescue nil  unless '0' == $opt_jet
+require 'rack/multiplexer'  rescue nil  unless '0' == $opt_multiplexer
+require 'sinatra/base'      rescue nil  unless '0' == $opt_sinatra
+require 'keight'            rescue nil  unless '0' == $opt_keight
+require 'hanami/router'     rescue nil  unless '0' == $opt_hanami
 
-flag_rack        = defined?(Rack) && $rack != '0'
+flag_rack        = defined?(Rack) && $opt_rack != '0'
 flag_jetrouter   = defined?(Rack::JetRouter)
 flag_multiplex   = defined?(Rack::Multiplexer)
 flag_sinatra     = defined?(Sinatra)
@@ -77,8 +78,8 @@ if flag_jetrouter
       ],
     ]
     opts = {
-      cache_size:     ($k8cache || 0).to_i,
-      _enable_range:  $k8range != '0',
+      cache_size:     ($opt_k8cache || 0).to_i,
+      _enable_range:  $opt_k8range != '0',
       #prefix_minlength_target: /\A\/api\/\w/,
     }
     Rack::JetRouter.new(mapping, **opts)
@@ -203,7 +204,7 @@ def newenv(path)
 end
 
 
-N = ($N || 100000).to_i
+N = ($opt_N || 100000).to_i
 title = "Router library benchmark"
 Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
