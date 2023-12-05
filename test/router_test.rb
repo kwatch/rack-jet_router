@@ -202,6 +202,16 @@ Oktest.scope do
 
     topic '#initialize()' do
 
+      spec "[!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility." do
+        r = Rack::JetRouter.new([], urlpath_cache_size: 5)
+        ok {r.instance_variable_get(:@cache_size)} == 5
+        ok {r.instance_variable_get(:@cache_dict)} == {}
+        #
+        r = Rack::JetRouter.new([], cache_size: 7)
+        ok {r.instance_variable_get(:@cache_size)} == 7
+        ok {r.instance_variable_get(:@cache_dict)} == {}
+      end
+
       spec "[!x2l32] gathers all endpoints." do
         all = @router.instance_eval { @all_endpoints }
         ok {all} == [
