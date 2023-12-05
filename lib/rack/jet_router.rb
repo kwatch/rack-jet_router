@@ -87,7 +87,7 @@ module Rack
     REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
-    def initialize(mapping, cache_size: 0, enable_range: true)
+    def initialize(mapping, cache_size: 0, _enable_range: true)
       @cache_size = cache_size
       @cache_dict = cache_size > 0 ? {} : nil
       ##
@@ -128,7 +128,7 @@ module Rack
       @urlpath_rexp = nil
       #
       #; [!x2l32] gathers all endpoints.
-      builder = Builder.new(self, enable_range)
+      builder = Builder.new(self, _enable_range)
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
       end
