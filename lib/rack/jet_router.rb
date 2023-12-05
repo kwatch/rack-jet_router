@@ -87,9 +87,10 @@ module Rack
     REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
-    def initialize(mapping, cache_size: 0,
+    def initialize(mapping, id_int: false, cache_size: 0,
                             urlpath_cache_size: 0,   # for backward compatibility
                             _enable_range: true)     # undocumentend keyword arg
+      @id_int = id_int
       #; [!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility.
       @cache_size = [cache_size, urlpath_cache_size].max()
       #; [!5tw57] cache is disabled when 'cache_size:' is zero.
