@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+$LOAD_PATH << File.absolute_path("../../lib", __FILE__)
+
 require 'benchmarker'
 
 require 'rack'              rescue nil  unless $rack == '0'
@@ -9,7 +11,6 @@ require 'sinatra/base'      rescue nil  unless $sina == '0'
 require 'keight'            rescue nil  unless $k8   == '0'
 require 'hanami/router'     rescue nil  unless $hanami == '0'
 
-flag_rack = flag_sinatra = flag_multiplexer = flag_keight = flag_hanami = false
 flag_rack        = defined?(Rack) && $rack != '0'
 flag_jetrouter   = defined?(Rack::JetRouter)
 flag_multiplex   = defined?(Rack::Multiplexer)
@@ -19,6 +20,14 @@ flag_hanami      = defined?(Hanami::Router)
 
 
 ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
+
+#flag_sinatra   = false   # because too slow
+target_urlpaths = [
+  "/api/aaa01",
+  "/api/aaa01/123",
+  "/api/zzz26",
+  "/api/zzz26/789",
+]
 
 
 if flag_rack
@@ -184,14 +193,6 @@ if flag_hanami
 end
 
 
-def _chk(tuple)
-  tuple[0] == 200  or raise "200 expected but got #{tuple[0]}"
-  body = tuple[2].each {|x| break x }
-  body == "<h1>hello</h1>" || body == "<h1>id=123</h1>" || body == "<h1>id=789</h1>"  or
-    raise "#{body.inspect}: unpexpected body"
-  GC.start
-end
-
 $environ = Rack::MockRequest.env_for("http://localhost/", method: 'GET')
 $environ.freeze
 
@@ -205,15 +206,6 @@ end
 N = ($N || 100000).to_i
 title = "Router library benchmark"
 Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
-
-  #flag_sinatra   = false   # because too slow
-  target_urlpaths = [
-    "/api/aaa01",
-    "/api/aaa01/123",
-    "/api/zzz26",
-    "/api/zzz26/789",
-  ]
-  tuple = nil
 
   puts ""
   puts "** rack            : #{Rack.release}"               if flag_rack
