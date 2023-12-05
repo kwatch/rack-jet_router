@@ -243,16 +243,16 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
   ### Rack
   if flag_rack
-    target_urlpaths.each do |x|
-      rack_app1.call(newenv(x))              # warm up
-      task "(Rack plain)  #{x}" do           # no routing
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = rack_app1.call(newenv(x))
-        end
-        tuple
-      end
-    end
+    #target_urlpaths.each do |x|
+    #  rack_app1.call(newenv(x))              # warm up
+    #  task "(Rack plain)  #{x}" do           # no routing
+    #    i = 0; n = N
+    #    while (i += 1) <= n
+    #      tuple = rack_app1.call(newenv(x))
+    #    end
+    #    tuple
+    #  end
+    #end
     target_urlpaths.each do |x|
       rack_app4.call(newenv(x))              # warm up
       task "(R::Req+Res)  #{x}" do           # no routing
@@ -321,6 +321,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     end
   end
 
+  ### Hanami
   if flag_hanami
     target_urlpaths.each do |x|
       hanami_app.call(newenv(x))          # warm up
