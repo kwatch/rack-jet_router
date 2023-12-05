@@ -132,6 +132,16 @@ Oktest.scope do
         ok {tuple[0]} == %r`\A/api/books/(#{id})\z`
       end
 
+      spec "[!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'." do
+        endpoint_pairs = [
+          ["/api/books/:id(.html|.json)", book_show_api],
+        ]
+        dict = @builder.build_tree(endpoint_pairs)
+        tuple = _find(dict, nil)
+        id = '[^./?]+'
+        ok {tuple[0]} == %r`\A/api/books/(#{id})(?:\.html|\.json)?\z`
+      end
+
       spec "[!po6o6] param regexp should be stored into nested dict as a Symbol." do
         endpoint_pairs = [
           ["/api/books/:id", book_show_api],
@@ -497,6 +507,14 @@ Oktest.scope do
         ok {s1} == '(?:[^./?]+\-[^./?]+\-[^./?]+)?'
         ok {s2} == '(?:([^./?]+)\-([^./?]+)\-([^./?]+))?'
         ok {arr} == ["yr", "mo", "dy"]
+      end
+
+      spec "[!oh9c6] optional string can have '|' (OR)." do
+        arr = []
+        s1, s2 = @builder.instance_eval { _param_patterns(nil, ".html|.json") {|a| arr << a } }
+        ok {s1} == '(?:\.html|\.json)?'
+        ok {s2} == '(?:\.html|\.json)?'
+        ok {arr} == []
       end
 
     end

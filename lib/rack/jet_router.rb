@@ -388,6 +388,7 @@ module Rack
             str = path[pos, m.begin(0) - pos]
             pos = m.end(0)
             #; [!akkkx] converts urlpath param into regexp.
+            #; [!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'.
             pat1, pat2 = _param_patterns(param, optional) do |param_|
               param_.freeze
               params << (param_d[param_] ||= param_)
@@ -495,12 +496,16 @@ module Rack
         #; [!69yj9] optional string can contains other params.
         elsif optional
           sb = ['(?:']
-          optional.scan(/(.*?)(?::(\w+))/) do |str, param_|
-            pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
-            sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
-            yield param_
+          #; [!oh9c6] optional string can have '|' (OR).
+          optional.split('|').each_with_index do |string, i|
+            sb << '|' if i > 0
+            string.scan(/(.*?)(?::(\w+))/) do |str, param_|
+              pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
+              sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
+              yield param_
+            end
+            sb << Regexp.escape($' || string)
           end
-          sb << Regexp.escape($' || optional)
           sb << ')?'
           s = sb.join()
           pat1 = s.gsub('<<', '' ).gsub('>>', '' )    # ex: '(?:\.[^./?]+)?'
