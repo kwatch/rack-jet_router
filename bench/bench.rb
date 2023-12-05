@@ -135,12 +135,24 @@ if flag_keight
     def do_show(id)     ; "<h1>id=#{id.inspect}</h1>"; end
   end
 
-  k8_app = K8::RackApplication.new([
-      ['/api', ENTRIES.map {|x|
-                 ["/#{x}",  K8HelloAction]
+  class K8CommentAction < K8::Action
+    mapping '/{comment_id}',  :GET=>:do_show
+    def do_show(id, comment_id); "<h1>id=#{id}, comment_id=#{comment_id}</h1>"; end
+  end
+
+  k8_app = (proc {
+    mapping = [
+      ["/api", ENTRIES.each_with_object([]) {|x, arr|
+                 arr << ["/#{x}"              ,  K8HelloAction]
+                 arr << ["/#{x}/{id}/comments",  K8CommentAction]
                }
       ],
-  ], urlpath_cache_size: 0)
+    ]
+    opts = {
+      #urlpath_cache_size: 0,
+    }
+    K8::RackApplication.new(mapping, **opts)
+  }).call()
 
   #k8_app.find('/api/books')     # warm up
 
