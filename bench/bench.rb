@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+require 'benchmarker'
+
 require 'rack'              rescue nil  unless $rack == '0'
 require 'rack/jet_router'   rescue nil  unless $jet  == '0'
 require 'rack/multiplexer'  rescue nil  unless $mpx  == '0'
@@ -184,10 +186,9 @@ def newenv(path)
 end
 
 
-require './benchmarker'
-
 N = ($N || 100000).to_i
-Benchmarker.new(:width=>33, :loop=>N) do |bm|
+title = "Router library benchmark"
+Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
   #flag_sinatra   = false   # because too slow
   target_urlpaths = [
@@ -209,8 +210,11 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   puts "** N=#{N}"
 
   ### empty task
-  bm.empty_task do
-    newenv("/api")
+  task nil do
+    i = 0; n = N
+    while (i += 1) <= n
+      newenv("/api")
+    end
   end
 
 
@@ -218,17 +222,23 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   if flag_rack
     target_urlpaths.each do |x|
       rack_app1.call(newenv(x))              # warm up
-      bm.task("(Rack plain)  #{x}") do       # no routing
-        tuple = rack_app1.call(newenv(x))
+      task "(Rack plain)  #{x}" do           # no routing
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = rack_app1.call(newenv(x))
+        end
+        tuple
       end
-      _chk(tuple)
     end
     target_urlpaths.each do |x|
       rack_app4.call(newenv(x))              # warm up
-      bm.task("(R::Req+Res)  #{x}") do       # no routing
-        tuple = rack_app4.call(newenv(x))
+      task "(R::Req+Res)  #{x}" do           # no routing
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = rack_app4.call(newenv(x))
+        end
+        tuple
       end
-      _chk(tuple)
     end
   end
 
@@ -236,10 +246,13 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   if flag_jetrouter
     target_urlpaths.each do |x|
       jet_router.call(newenv(x))             # warm up
-      bm.task("(JetRouter)   #{x}") do
-        tuple = jet_router.call(newenv(x))
+      task "(JetRouter)   #{x}" do
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = jet_router.call(newenv(x))
+        end
+        tuple
       end
-      _chk(tuple)
     end
   end
 
@@ -247,10 +260,13 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   if flag_multiplex
     target_urlpaths.each do |x|
       mpx_app.call(newenv(x))                # warm up
-      bm.task("(Multiplexer) #{x}") do
-        tuple = mpx_app.call(newenv(x))
+      task "(Multiplexer) #{x}" do
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = mpx_app.call(newenv(x))
+        end
+        tuple
       end
-      _chk(tuple)
     end
   end
 
@@ -258,10 +274,13 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   if flag_sinatra
     target_urlpaths.each do |x|
       sina_app.call(newenv(x))               # warm up
-      bm.task("(Sinatra)     #{x}") do
-        tuple = sina_app.call(newenv(x))
+      task "(Sinatra)     #{x}" do
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = sina_app.call(newenv(x))
+        end
+        tuple
       end
-      _chk(tuple)
     end
   end
 
@@ -269,21 +288,35 @@ Benchmarker.new(:width=>33, :loop=>N) do |bm|
   if flag_keight
     target_urlpaths.each do |x|
       k8_app.call(newenv(x))                 # warm up
-      bm.task("(Keight.rb)   #{x}") do
-        tuple = k8_app.call(newenv(x))
+      task "(Keight.rb)   #{x}" do
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = k8_app.call(newenv(x))
+        end
+        tuple
       end
-      _chk(tuple)
     end
   end
 
   if flag_hanami
     target_urlpaths.each do |x|
       hanami_router.call(newenv(x))          # warm up
-      bm.task("(Hanami::Router) #{x}") do
-        tuple = hanami_router.call(newenv(x))
+      task "(Hanami::Router) #{x}" do
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = hanami_router.call(newenv(x))
+        end
+        tuple
       end
-      _chk(tuple)
     end
+  end
+
+  ## validation
+  validate do |val|   # or: validate do |val, task_name, tag|
+    tuple = val
+    assert tuple[0] == 200, "200 expected but got #{tuple[0]}"
+    body = tuple[2].each {|x| break x }
+    assert body == "<h1>hello</h1>" || body == "<h1>id=123</h1>" || body == "<h1>id=789</h1>", "#{body.inspect}: unpexpected body"
   end
 
 end
