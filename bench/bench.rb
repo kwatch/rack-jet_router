@@ -6,7 +6,7 @@ require 'benchmarker'
 Benchmarker.parse_cmdopts()
 
 require 'rack'              rescue nil  unless '0' == $opt_rack
-require 'rack/jet_router'   rescue nil  unless '0' == $opt_jet
+require 'rack/jet_router'   rescue nil  unless '0' == $opt_jetrouter
 require 'rack/multiplexer'  rescue nil  unless '0' == $opt_multiplexer
 require 'sinatra/base'      rescue nil  unless '0' == $opt_sinatra
 require 'keight'            rescue nil  unless '0' == $opt_keight
