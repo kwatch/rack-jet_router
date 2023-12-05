@@ -87,9 +87,10 @@ module Rack
     REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
-    def initialize(mapping, cache_size: 0,
+    def initialize(mapping, id_int: false, cache_size: 0,
                             urlpath_cache_size: 0,   # for backward compatibility
                             _enable_range: true)     # undocumentend keyword arg
+      @id_int = id_int
       #; [!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility.
       @cache_size = [cache_size, urlpath_cache_size].max()
       #; [!5tw57] cache is disabled when 'cache_size:' is zero.
@@ -276,21 +277,26 @@ module Rack
     end
 
     ## Returns Hash object representing urlpath parameter values. Override if necessary.
-    ## ex:
-    ##     module OverridingJetRouter
-    ##       def build_param_values(names, values)
-    ##         d = {}
-    ##         names.zip(values).each {|k, v|
-    ##           ## converts urlpath pavam value into integer
-    ##           v = v.to_i if k == "id" || k.end_with?("_id")
-    ##           d[k] = v
-    ##         }
-    ##         return d
-    ##       end
-    ##     end
-    ##     Rack::JetRouter.prepend(OverridingJetRouter)
     def build_param_values(names, values)
-      return Hash[names.zip(values)]
+      #; [!qxcis] when 'id_int: true' is specified to constructor...
+      if @id_int
+        #; [!l6p84] converts urlpath pavam value into integer.
+        d = {}
+        for name, val in names.zip(values)
+          d[name] = id_param?(name) ? val.to_i : val
+        end
+        return d
+      #; [!vrbo5] else...
+      else
+        #; [!yc9n8] creates new Hash object from param names and values.
+        return Hash[names.zip(values)]
+      end
+    end
+
+    ## Determines whether a parameter represents id or not. Override if necessary.
+    def id_param?(param)
+      #; [!ree3r] returns true if param name is 'id' or 'xxx_id'.
+      return param == "id" || param.end_with?("_id")
     end
 
     public
@@ -314,18 +320,10 @@ module Rack
     end
 
     ## Returns regexp string of path parameter. Override if necessary.
-    ## ex:
-    ##     module OverridingJetRouter
-    ##       def param2rexp(param)
-    ##         return '\d+' if param == "id" || param =~ /_id\z/   # !!!
-    ##         return super
-    ##       end
-    ##     end
-    ##     Rack::JetRouter.prepend(OverridingJetRouter)
     def param2rexp(param)   # called from Builder class
       #; [!6sd9b] returns regexp string according to param name.
-      #return '\d+' if param == "id" || param =~ /_id\z/
-      return '[^./?]+'
+      #; [!rfvk2] returns '\d+' if 'id_int:' enabled and param name is 'id' or 'xxx_id'.
+      return @id_int && id_param?(param) ? '\d+' : '[^./?]+'
     end
 
 

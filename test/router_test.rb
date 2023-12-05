@@ -131,12 +131,16 @@ Oktest.scope do
     topic '#param2rexp()' do
 
       spec "[!6sd9b] returns regexp string according to param name." do
-        s = @router.param2rexp("id")
-        ok {s} == '[^./?]+'
-        s = @router.param2rexp("user_id")
-        ok {s} == '[^./?]+'
-        s = @router.param2rexp("username")
-        ok {s} == '[^./?]+'
+        ok {@router.param2rexp("id")}       == '[^./?]+'
+        ok {@router.param2rexp("user_id")}  == '[^./?]+'
+        ok {@router.param2rexp("username")} == '[^./?]+'
+      end
+
+      spec "[!rfvk2] returns '\d+' if 'id_int:' enabled and param name is 'id' or 'xxx_id'." do
+        router = Rack::JetRouter.new([], id_int: true)
+        ok {router.param2rexp("id")}       == '\d+'
+        ok {router.param2rexp("user_id")}  == '\d+'
+        ok {router.param2rexp("username")} == '[^./?]+'
       end
 
     end
@@ -546,6 +550,51 @@ Oktest.scope do
         env = {}
         @router.instance_eval { store_param_values(env, {"id"=>123}) }
         ok {env} == {'rack.urlpath_params' => {"id"=>123}}
+      end
+
+    end
+
+
+    topic '#build_param_values()' do
+
+      case_when "[!qxcis] when 'id_int: true' is specified to constructor..." do
+
+        spec "[!l6p84] converts urlpath pavam value into integer." do
+          router = Rack::JetRouter.new([], id_int: true)
+          router.instance_exec(self) do |_|
+            ret = build_param_values(["id", "name"], ["123", "foo"])
+            _.ok {ret} == {"id" => 123, "name" => "foo"}
+          end
+        end
+
+      end
+
+      case_when "[!vrbo5] else..." do
+
+        spec "[!yc9n8] creates new Hash object from param names and values." do
+          router = Rack::JetRouter.new([])
+          router.instance_exec(self) do |_|
+            ret = build_param_values(["id", "name"], ["123", "foo"])
+            _.ok {ret} == {"id" => "123", "name" => "foo"}
+          end
+        end
+
+      end
+
+    end
+
+
+    topic '#id_param?()' do
+
+      spec "[!ree3r] returns true if param name is 'id' or 'xxx_id'." do
+        @router.instance_exec(self) do |_|
+          _.ok {id_param?("id")} == true
+          _.ok {id_param?("item_id")} == true
+          _.ok {id_param?("author_id")} == true
+          #
+          _.ok {id_param?("id_item")} == false
+          _.ok {id_param?("itemid")} == false
+        end
       end
 
     end
