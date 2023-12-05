@@ -127,18 +127,21 @@ module Rack
       ##
       @urlpath_rexp = nil
       #
-      #; [!u2ff4] compiles urlpath mapping.
+      #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, enable_range)
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
-        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-        has_param = (path =~ /:\w+|\(.*?\)/)
-        @fixed_endpoints[path] = item unless has_param
       end
-      endpoints = @all_endpoints.select {|path, _| ! @fixed_endpoints.key?(path) }
-      tree = builder.build_tree(endpoints)
-      tuples = @variable_endpoints
-      @urlpath_rexp = builder.build_rexp(tree) {|tuple| tuples << tuple }
+      #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+      param_rexp = /:\w+|\(.*?\)/
+      pairs1, pairs2 = @all_endpoints.partition {|path, _| path =~ param_rexp }
+      pairs2.each {|path, item| @fixed_endpoints[path] = item }
+      #; [!saa1a] compiles compound urlpath regexp.
+      tree = builder.build_tree(pairs1)
+      @urlpath_rexp = builder.build_rexp(tree) do |tuple|
+        #; [!f1d7s] builds variable endpoint list.
+        @variable_endpoints << tuple
+      end
     end
 
     attr_reader :urlpath_rexp
