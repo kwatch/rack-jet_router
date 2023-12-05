@@ -426,7 +426,7 @@ Oktest.scope do
         ok {@router.call(new_env(:GET, '/api/book'))} == expected
       end
 
-      topic "[!gclbs] if mapped object is a Hash..." do
+      case_when "[!gclbs] if mapped object is a Hash..." do
 
         spec "[!p1fzn] invokes app mapped to request method." do
           ok {@router.call(new_env(:GET,    '/admin/books'))}     == [200, {}, ["admin_book_list_app"]]
