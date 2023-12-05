@@ -208,15 +208,14 @@ N = ($opt_N || 100000).to_i
 title = "Router library benchmark"
 Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
-  puts ""
-  puts "** rack            : #{Rack.release}"               if flag_rack
-  puts "** rack-jet_router : #{Rack::JetRouter::RELEASE rescue '-'}"   if flag_jetrouter
-  puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION}" if flag_multiplex
-  puts "** sinatra         : #{Sinatra::VERSION}"           if flag_sinatra
-  puts "** keight          : #{K8::RELEASE rescue '-'}"     if flag_keight
-  puts "** hanami          : #{Hanami::Router::VERSION rescue '-'}" if flag_hanami
-  puts ""
   puts "** N=#{N}"
+  puts "** rack            : #{Rack.release rescue '-'}"               if flag_rack
+  puts "** rack-jet_router : #{Rack::JetRouter::RELEASE rescue '-'}"   if flag_jetrouter
+  puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION rescue '-'}" if flag_multiplex
+  puts "** sinatra         : #{Sinatra::VERSION rescue '-'}"           if flag_sinatra
+  puts "** keight          : #{K8::RELEASE rescue '-'}"                if flag_keight
+  puts "** hanami          : #{Hanami::Router::VERSION rescue '-'}"    if flag_hanami
+  puts ""
 
   ### empty task
   task nil do
