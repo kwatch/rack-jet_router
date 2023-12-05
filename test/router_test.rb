@@ -131,12 +131,16 @@ Oktest.scope do
     topic '#param2rexp()' do
 
       spec "[!6sd9b] returns regexp string according to param name." do
-        s = @router.param2rexp("id")
-        ok {s} == '[^./?]+'
-        s = @router.param2rexp("user_id")
-        ok {s} == '[^./?]+'
-        s = @router.param2rexp("username")
-        ok {s} == '[^./?]+'
+        ok {@router.param2rexp("id")}       == '[^./?]+'
+        ok {@router.param2rexp("user_id")}  == '[^./?]+'
+        ok {@router.param2rexp("username")} == '[^./?]+'
+      end
+
+      spec "[!rfvk2] returns '\d+' if 'id_int:' enabled and param name is 'id' or 'xxx_id'." do
+        router = Rack::JetRouter.new([], id_int: true)
+        ok {router.param2rexp("id")}       == '\d+'
+        ok {router.param2rexp("user_id")}  == '\d+'
+        ok {router.param2rexp("username")} == '[^./?]+'
       end
 
     end

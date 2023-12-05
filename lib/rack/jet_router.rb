@@ -330,8 +330,8 @@ module Rack
     ##     Rack::JetRouter.prepend(OverridingJetRouter)
     def param2rexp(param)   # called from Builder class
       #; [!6sd9b] returns regexp string according to param name.
-      #return '\d+' if param == "id" || param =~ /_id\z/
-      return '[^./?]+'
+      #; [!rfvk2] returns '\d+' if 'id_int:' enabled and param name is 'id' or 'xxx_id'.
+      return @id_int && id_param?(param) ? '\d+' : '[^./?]+'
     end
 
 
