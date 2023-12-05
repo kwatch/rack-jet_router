@@ -245,7 +245,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   if flag_rack
     #target_urlpaths.each do |x|
     #  rack_app1.call(newenv(x))              # warm up
-    #  task "(Rack plain)  #{x}" do           # no routing
+    #  task "(Rack plain app) #{x}" do        # no routing
     #    i = 0; n = N
     #    while (i += 1) <= n
     #      tuple = rack_app1.call(newenv(x))
@@ -255,7 +255,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     #end
     target_urlpaths.each do |x|
       rack_app4.call(newenv(x))              # warm up
-      task "(R::Req+Res)  #{x}" do           # no routing
+      task "(Rack::Req+Res)  #{x}" do        # no routing
         i = 0; n = N
         while (i += 1) <= n
           tuple = rack_app4.call(newenv(x))
@@ -269,7 +269,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   if flag_jetrouter
     target_urlpaths.each do |x|
       jet_router.call(newenv(x))             # warm up
-      task "(JetRouter)   #{x}" do
+      task "(JetRouter)      #{x}" do
         i = 0; n = N
         while (i += 1) <= n
           tuple = jet_router.call(newenv(x))
@@ -283,7 +283,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   if flag_multiplexer
     target_urlpaths.each do |x|
       mpx_app.call(newenv(x))                # warm up
-      task "(Multiplexer) #{x}" do
+      task "(Multiplexer)    #{x}" do
         i = 0; n = N
         while (i += 1) <= n
           tuple = mpx_app.call(newenv(x))
@@ -297,7 +297,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   if flag_sinatra
     target_urlpaths.each do |x|
       sina_app.call(newenv(x))               # warm up
-      task "(Sinatra)     #{x}" do
+      task "(Sinatra)        #{x}" do
         i = 0; n = N
         while (i += 1) <= n
           tuple = sina_app.call(newenv(x))
@@ -311,7 +311,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   if flag_keight
     target_urlpaths.each do |x|
       k8_app.call(newenv(x))                 # warm up
-      task "(Keight.rb)   #{x}" do
+      task "(Keight)         #{x}" do
         i = 0; n = N
         while (i += 1) <= n
           tuple = k8_app.call(newenv(x))
