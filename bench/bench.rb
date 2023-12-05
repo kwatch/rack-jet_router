@@ -7,7 +7,7 @@ require 'rack/jet_router'   rescue nil  unless $jet  == '0'
 require 'rack/multiplexer'  rescue nil  unless $mpx  == '0'
 require 'sinatra/base'      rescue nil  unless $sina == '0'
 require 'keight'            rescue nil  unless $k8   == '0'
-require 'hanami'            rescue nil  unless $hanami == '0'
+require 'hanami/router'     rescue nil  unless $hanami == '0'
 
 flag_rack = flag_sinatra = flag_multiplexer = flag_keight = flag_hanami = false
 flag_rack        = defined?(Rack) && $rack != '0'
@@ -158,7 +158,7 @@ if flag_hanami
   end
 
   hanami_router = Hanami::Router.new
-  hanami_router.namespace '/api' do |api|
+  hanami_router.scope '/api' do |api|
     ENTRIES.each do |x|
       api.get    "/#{x}"    , to: hanami_index
       api.get    "/#{x}/:id", to: hanami_show
@@ -205,7 +205,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   puts "** rack-multiplexer: #{Rack::Multiplexer::VERSION}" if flag_multiplex
   puts "** sinatra         : #{Sinatra::VERSION}"           if flag_sinatra
   puts "** keight          : #{K8::RELEASE rescue '-'}"     if flag_keight
-  puts "** hanami          : #{Hanami::VERSION rescue '-'}" if flag_hanami
+  puts "** hanami          : #{Hanami::Router::VERSION rescue '-'}" if flag_hanami
   puts ""
   puts "** N=#{N}"
 
