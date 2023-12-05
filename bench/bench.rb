@@ -149,19 +149,26 @@ end
 
 if flag_hanami
 
-  hanami_index = proc do |env|
-    [200, {"Content-Type": "text/html"}, ["<h1>hello</h1>"]]
-  end
-  hanami_show = proc do |env|
-    params = env['router.params']
-    [200, {"Content-Type": "text/html"}, ["<h1>id=#{params[:id]}</h1>"]]
-  end
-
-  hanami_router = Hanami::Router.new
-  hanami_router.scope '/api' do |api|
-    ENTRIES.each do |x|
-      api.get    "/#{x}"    , to: hanami_index
-      api.get    "/#{x}/:id", to: hanami_show
+  ## ref: https://github.com/hanami/router
+  hanami_app = Hanami::Router.new do
+    index_handler = proc do |env|
+      [200, {"Content-Type": "text/html"}, ["<h1>hello</h1>"]]
+    end
+    show_handler = proc do |env|
+      d = env['router.params']
+      [200, {"Content-Type": "text/html"}, ["<h1>id=#{d[:id]}</h1>"]]
+    end
+    comment_handler = proc do |env|
+      d = env['router.params']
+      [200, {"Content-Type": "text/html"}, ["<h1>id=#{d[:id]}, comment_id=#{d[:comment_id]}</h1>"]]
+    end
+    #
+    scope "api" do
+      ENTRIES.each do |x|
+        get "/#{x}"    , to: index_handler
+        get "/#{x}/:id", to: show_handler
+        get "/#{x}/:id/comments/:comment_id", to: comment_handler
+      end
     end
   end
 
@@ -300,11 +307,11 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
   if flag_hanami
     target_urlpaths.each do |x|
-      hanami_router.call(newenv(x))          # warm up
+      hanami_app.call(newenv(x))          # warm up
       task "(Hanami::Router) #{x}" do
         i = 0; n = N
         while (i += 1) <= n
-          tuple = hanami_router.call(newenv(x))
+          tuple = hanami_app.call(newenv(x))
         end
         tuple
       end
