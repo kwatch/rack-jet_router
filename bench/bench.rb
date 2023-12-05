@@ -105,6 +105,7 @@ end
 if flag_sinatra
 
   class SinaApp < Sinatra::Base
+    ## run benchmarks without middlewares
     set :sessions   , false
     set :logging    , false
     set :protection , false
@@ -113,6 +114,7 @@ if flag_sinatra
     ENTRIES.each do |x|
       get "/api/#{x}"     do "<h1>hello</h1>" end
       get "/api/#{x}/:id" do "<h1>id=#{params['id']}</h1>" end
+      get "/api/#{x}/:id/comments/:comment_id" do "<h1>id=#{params['id']}, comment_id=#{params['comment_id']}</h1>" end
     end
   end
 
