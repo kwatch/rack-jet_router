@@ -14,14 +14,14 @@ require 'hanami/router'     rescue nil  unless '0' == $opt_hanami
 
 flag_rack        = defined?(Rack) && $opt_rack != '0'
 flag_jetrouter   = defined?(Rack::JetRouter)
-flag_multiplex   = defined?(Rack::Multiplexer)
+flag_multiplexer = defined?(Rack::Multiplexer)
 flag_sinatra     = defined?(Sinatra)
 flag_keight      = defined?(K8)
 flag_hanami      = defined?(Hanami::Router)
 
 puts "** rack            : #{!flag_rack      ? '-' : Rack.release}"
 puts "** rack-jet_router : #{!flag_jetrouter ? '-' : Rack::JetRouter::RELEASE}"
-puts "** rack-multiplexer: #{!flag_multiplex ? '-' : Rack::Multiplexer::VERSION}"
+puts "** rack-multiplexer: #{!flag_multiplexer ? '-' : Rack::Multiplexer::VERSION}"
 puts "** sinatra         : #{!flag_sinatra   ? '-' : Sinatra::VERSION}"
 puts "** keight          : #{!flag_keight    ? '-' : K8::RELEASE}"
 puts "** hanami-router   : #{!flag_hanami    ? '-' : Hanami::Router::VERSION}"
@@ -97,7 +97,7 @@ if flag_jetrouter
 end
 
 
-if flag_multiplex
+if flag_multiplexer
 
   mpx_app = Rack::Multiplexer.new().tap do |app|
     handler1 = proc {|env|
@@ -273,7 +273,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   end
 
   ### Rack::Multiplexer
-  if flag_multiplex
+  if flag_multiplexer
     target_urlpaths.each do |x|
       mpx_app.call(newenv(x))                # warm up
       task "(Multiplexer) #{x}" do
