@@ -551,6 +551,22 @@ Oktest.scope do
     end
 
 
+    topic '#id_param?()' do
+
+      spec "[!ree3r] returns true if param name is 'id' or 'xxx_id'." do
+        @router.instance_exec(self) do |_|
+          _.ok {id_param?("id")} == true
+          _.ok {id_param?("item_id")} == true
+          _.ok {id_param?("author_id")} == true
+          #
+          _.ok {id_param?("id_item")} == false
+          _.ok {id_param?("itemid")} == false
+        end
+      end
+
+    end
+
+
   end
 
 
