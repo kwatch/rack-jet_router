@@ -277,6 +277,21 @@ Oktest.scope do
         end
       end
 
+      spec "[!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths." do
+        mapping = {
+          "/api/books(.html|.json)" => book_list_api,
+        }
+        router = Rack::JetRouter.new(mapping)
+        router.instance_exec(self) do |_|
+          _.ok {@fixed_endpoints} == {
+            "/api/books"      => book_list_api,
+            "/api/books.html" => book_list_api,
+            "/api/books.json" => book_list_api,
+          }
+          _.ok {@variable_endpoints} == []
+        end
+      end
+
       spec "[!saa1a] compiles compound urlpath regexp." do
         id = '[^./?]+'
         z  = '(\z)'

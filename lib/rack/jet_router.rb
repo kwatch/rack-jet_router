@@ -136,15 +136,25 @@ module Rack
       #
       #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, _enable_range)
+      param_rexp = /:\w+|\(.*?\)/
+      variable_pairs = []
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
+        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        if path !~ param_rexp
+          @fixed_endpoints[path] = item
+        #; [!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths.
+        elsif path =~ /\A([^:\(\)]*)\(([^:\(\)]+)\)\z/
+          @fixed_endpoints[$1] = item unless $1.empty?
+          $2.split('|').each do |s|
+            @fixed_endpoints[$1 + s] = item unless s.empty?
+          end
+        else
+          variable_pairs << [path, item]
+        end
       end
-      #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-      param_rexp = /:\w+|\(.*?\)/
-      pairs1, pairs2 = @all_endpoints.partition {|path, _| path =~ param_rexp }
-      pairs2.each {|path, item| @fixed_endpoints[path] = item }
       #; [!saa1a] compiles compound urlpath regexp.
-      tree = builder.build_tree(pairs1)
+      tree = builder.build_tree(variable_pairs)
       @urlpath_rexp = builder.build_rexp(tree) do |tuple|
         #; [!f1d7s] builds variable endpoint list.
         @variable_endpoints << tuple
