@@ -33,8 +33,10 @@ ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
 target_urlpaths = [
   "/api/aaa01",
   "/api/aaa01/123",
+#  "/api/aaa01/123/comments/7",
   "/api/zzz26",
-  "/api/zzz26/789",
+  "/api/zzz26/456",
+#  "/api/zzz26/456/comments/7",
 ]
 
 
@@ -330,7 +332,12 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     tuple = val
     assert tuple[0] == 200, "200 expected but got #{tuple[0]}"
     body = tuple[2].each {|x| break x }
-    assert body == "<h1>hello</h1>" || body == "<h1>id=123</h1>" || body == "<h1>id=789</h1>", "#{body.inspect}: unpexpected body"
+    assert body == "<h1>hello</h1>" || \
+           body == "<h1>id=123</h1>" || \
+           body == "<h1>id=456</h1>" || \
+           body == "<h1>id=123, comment_id=7</h1>" || \
+           body == "<h1>id=456, comment_id=7</h1>", \
+           "#{body.inspect}: unpexpected body"
   end
 
 end
