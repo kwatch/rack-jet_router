@@ -19,12 +19,19 @@ flag_sinatra     = defined?(Sinatra)
 flag_keight      = defined?(K8)
 flag_hanami      = defined?(Hanami::Router)
 
-puts "** rack            : #{!flag_rack      ? '-' : Rack.release}"
-puts "** rack-jet_router : #{!flag_jetrouter ? '-' : Rack::JetRouter::RELEASE}"
-puts "** rack-multiplexer: #{!flag_multiplexer ? '-' : Rack::Multiplexer::VERSION}"
-puts "** sinatra         : #{!flag_sinatra   ? '-' : Sinatra::VERSION}"
-puts "** keight          : #{!flag_keight    ? '-' : K8::RELEASE}"
-puts "** hanami-router   : #{!flag_hanami    ? '-' : Hanami::Router::VERSION}"
+def version_info(name, opt, flag)
+  version = opt == '0' ? "(skipped)" \
+          : ! flag     ? "(not installed)" \
+          : yield
+  return "** %-20s : %s" % [name, version]
+end
+
+puts version_info("rack"            , $opt_rack       , flag_rack       ) { Rack.release }
+puts version_info("rack-jet_router" , $opt_jetrouter  , flag_jetrouter  ) { Rack::JetRouter::RELEASE }
+puts version_info("rack-multiplexer", $opt_multiplexer, flag_multiplexer) { Rack::Multiplexer::VERSION }
+puts version_info("sinatra"         , $opt_sinatra    , flag_sinatra    ) { Sinatra::VERSION }
+puts version_info("keight"          , $opt_keight     , flag_keight     ) { K8::RELEASE }
+puts version_info("hanami-router"   , $opt_hanami     , flag_hanami     ) { Hanami::Router::VERSION }
 
 
 ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
