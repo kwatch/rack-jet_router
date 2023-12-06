@@ -2,6 +2,18 @@ CHANGES
 =======
 
 
+Release 1.3.0 (????-??-??)
+--------------------------
+
+* [enhance] Performance has improved (about 10%). This improvement was achieved by optimizing regular expressions.
+* [enhance] URL path mapping can be nested Hash as well as nested Array. See the document for detail.
+* [enhance] Passing the `int_param: /(?:\A|_)id\z/` keyword argument to `JetRouter.new()` changes the router to treat urlpath parameter `id` or `xxx_id` as integer type.
+* [enhance] Passing the `env_key:` keyword argument to `JetRouter.new()` changes the key of environemnt to store URL path parameter values.
+* [change] Keyword parameter `urlpath_cache_size:` of `JetRouter.new()` is renamed to `cache_size:`. Old parameter name is also available for backward compatibility, but it is recommended to use new parameter name.
+* [change] Rename `JetRouter#build_urlpath_parameter_vars()` to `JetRouter#build_param_values()`.
+* [change] Update benchmark script to require 'benchmarker' gem.
+
+
 Release 1.2.0 (2016-10-16)
 --------------------------
 
