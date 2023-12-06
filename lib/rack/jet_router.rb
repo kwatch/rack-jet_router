@@ -273,7 +273,7 @@ module Rack
 
     ## Stores urlpath parameter values into `env['rack.urlpath_params']`. Override if necessary.
     def store_param_values(env, values)
-      #; [!94riv] stores urlpath param values into `env['rack.urlpath_params]`.
+      #; [!94riv] stores urlpath param values into `env['rack.urlpath_params']`.
       #; [!9he9h] env key can be changed by `env_key:` kwarg of 'JetRouter#initialize()'.
       env[@env_key] = values if values
     end

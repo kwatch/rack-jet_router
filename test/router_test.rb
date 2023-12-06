@@ -546,7 +546,7 @@ Oktest.scope do
 
     topic '#store_param_values()' do
 
-      spec "[!94riv] stores urlpath param values into `env['rack.urlpath_params]`." do
+      spec "[!94riv] stores urlpath param values into `env['rack.urlpath_params']`." do
         env = {}
         @router.instance_eval { store_param_values(env, {"id"=>123}) }
         ok {env} == {'rack.urlpath_params' => {"id"=>123}}
