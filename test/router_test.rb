@@ -552,6 +552,13 @@ Oktest.scope do
         ok {env} == {'rack.urlpath_params' => {"id"=>123}}
       end
 
+      spec "[!9he9h] env key can be changed by `env_key:` kwarg of 'JetRouter#initialize()'." do
+        router = Rack::JetRouter.new([], env_key: 'rack.params')
+        env = {}
+        router.instance_eval { store_param_values(env, {"book_id"=>123}) }
+        ok {env} == {'rack.params' => {"book_id"=>123}}
+      end
+
     end
 
 
