@@ -292,6 +292,25 @@ Oktest.scope do
         end
       end
 
+      spec "[!ylyi0] stores '/foo' as fixed path when path pattern is '/foo(.:format)'." do
+        mapping = {
+          "/api/books(.json|.:format|.html)" => book_list_api,
+        }
+        router = Rack::JetRouter.new(mapping)
+        router.instance_exec(self) do |_|
+          _.ok {@fixed_endpoints} == {
+            "/api/books"      => book_list_api,
+            "/api/books.json" => book_list_api,
+            "/api/books.html" => book_list_api,
+          }
+          _.ok {@variable_endpoints} == [
+            [%r!\A/api/books(?:\.json|\.([^./?]+)|\.html)?\z!,
+             ["format"], book_list_api, (10..-1)],
+          ]
+        end
+
+      end
+
       spec "[!saa1a] compiles compound urlpath regexp." do
         id = '[^./?]+'
         z  = '(\z)'

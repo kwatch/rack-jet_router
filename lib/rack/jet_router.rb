@@ -144,11 +144,19 @@ module Rack
         if path !~ param_rexp
           @fixed_endpoints[path] = item
         #; [!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths.
-        elsif path =~ /\A([^:\(\)]*)\(([^:\(\)]+)\)\z/
+        #; [!ylyi0] stores '/foo' as fixed path when path pattern is '/foo(.:format)'.
+        elsif path =~ /\A([^:\(\)]*)\(([^\(\)]+)\)\z/
           @fixed_endpoints[$1] = item unless $1.empty?
+          has_param = false
           $2.split('|').each do |s|
-            @fixed_endpoints[$1 + s] = item unless s.empty?
+            next if s.empty?
+            if s.include?(':')
+              has_param = true
+            else
+              @fixed_endpoints[$1 + s] = item
+            end
           end
+          variable_pairs << [path, item] if has_param
         else
           variable_pairs << [path, item]
         end
