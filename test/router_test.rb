@@ -546,10 +546,17 @@ Oktest.scope do
 
     topic '#store_param_values()' do
 
-      spec "[!94riv] stores urlpath param values into `env['rack.urlpath_params]`." do
+      spec "[!94riv] stores urlpath param values into `env['rack.urlpath_params']`." do
         env = {}
         @router.instance_eval { store_param_values(env, {"id"=>123}) }
         ok {env} == {'rack.urlpath_params' => {"id"=>123}}
+      end
+
+      spec "[!9he9h] env key can be changed by `env_key:` kwarg of 'JetRouter#initialize()'." do
+        router = Rack::JetRouter.new([], env_key: 'rack.params')
+        env = {}
+        router.instance_eval { store_param_values(env, {"book_id"=>123}) }
+        ok {env} == {'rack.params' => {"book_id"=>123}}
       end
 
     end

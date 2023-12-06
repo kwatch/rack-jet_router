@@ -87,10 +87,11 @@ module Rack
     REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
-    def initialize(mapping, id_int: false, cache_size: 0,
+    def initialize(mapping, id_int: false, cache_size: 0, env_key: 'rack.urlpath_params',
                             urlpath_cache_size: 0,   # for backward compatibility
                             _enable_range: true)     # undocumentend keyword arg
       @id_int = id_int
+      @env_key = env_key
       #; [!21mf9] 'urlpath_cache_size:' kwarg is available for backward compatibility.
       @cache_size = [cache_size, urlpath_cache_size].max()
       #; [!5tw57] cache is disabled when 'cache_size:' is zero.
@@ -272,8 +273,9 @@ module Rack
 
     ## Stores urlpath parameter values into `env['rack.urlpath_params']`. Override if necessary.
     def store_param_values(env, values)
-      #; [!94riv] stores urlpath param values into `env['rack.urlpath_params]`.
-      env['rack.urlpath_params'] = values if values
+      #; [!94riv] stores urlpath param values into `env['rack.urlpath_params']`.
+      #; [!9he9h] env key can be changed by `env_key:` kwarg of 'JetRouter#initialize()'.
+      env[@env_key] = values if values
     end
 
     ## Returns Hash object representing urlpath parameter values. Override if necessary.
