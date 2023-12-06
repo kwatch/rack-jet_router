@@ -136,8 +136,8 @@ Oktest.scope do
         ok {@router.param2rexp("username")} == '[^./?]+'
       end
 
-      spec "[!rfvk2] returns '\d+' if 'id_int:' enabled and param name is 'id' or 'xxx_id'." do
-        router = Rack::JetRouter.new([], id_int: true)
+      spec "[!rfvk2] returns '\d+' if param name matched to int param regexp." do
+        router = Rack::JetRouter.new([], int_param: /(\A|_)id\z/)
         ok {router.param2rexp("id")}       == '\d+'
         ok {router.param2rexp("user_id")}  == '\d+'
         ok {router.param2rexp("username")} == '[^./?]+'
@@ -564,10 +564,10 @@ Oktest.scope do
 
     topic '#build_param_values()' do
 
-      case_when "[!qxcis] when 'id_int: true' is specified to constructor..." do
+      case_when "[!qxcis] when 'int_param:' kwarg is specified to constructor..." do
 
         spec "[!l6p84] converts urlpath pavam value into integer." do
-          router = Rack::JetRouter.new([], id_int: true)
+          router = Rack::JetRouter.new([], int_param: /(\A|_)id\z/)
           router.instance_exec(self) do |_|
             ret = build_param_values(["id", "name"], ["123", "foo"])
             _.ok {ret} == {"id" => 123, "name" => "foo"}
