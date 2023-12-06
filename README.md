@@ -5,7 +5,7 @@
 Rack::JetRouter is crazy-fast router library for Rack application,
 derived from [Keight.rb](https://github.com/kwatch/keight/tree/ruby).
 
-Rack::JetRouter requires Ruby >= 2.0.
+Rack::JetRouter requires Ruby >= 2.4.
 
 
 ## Benchmark
@@ -189,6 +189,69 @@ handler.__send__(action, args)
 ## Topics
 
 
+### Nested Array v.s. Nested Hash
+
+URL path mapping can be not only nested Array but also nested Hash.
+
+```ruby
+## nested Array
+mapping = [
+    ["/api", [
+        ["/books", [
+            [""      , book_list_api],
+            ["/:id"  , book_show_api],
+        ]],
+    ]],
+]
+
+## nested Hash
+mapping = {
+    "/api" => {
+        "/books" => {
+            ""      => book_list_api,
+            "/:id"  => book_show_api,
+        },
+    },
+}
+```
+
+But nested Hash mapping can't include request method mappings, because
+it is hard to distinguish between URL path mapping and request method mapping.
+
+```ruby
+## NOT OK
+mapping = {
+    "/api" => {
+        "/books" => {
+            ""      => {GET: book_list_api, POST: book_create_api},
+            "/:id"  => {GET: book_show_api, PUT: book_update_api},
+        },
+    },
+}
+```
+
+In this case, define subclass of Hash class and use it instead of Hash.
+
+```ruby
+class Map < Hash       # define subclass of Hash class
+end
+
+def Map(**kwargs)      # helper method to create subclass object
+  return Map.new.update(kwargs)
+end
+
+## OK
+mapping = {
+    "/api" => {
+        "/books" => {
+            ""      => Map(GET: book_list_api, POST: book_create_api),
+            "/:id"  => Map(GET: book_show_api, PUT: book_update_api),
+        },
+    },
+}
+```
+
+
 ### URL Path Parameters
 
 In Rack application, URL path parameters (such as `{"id"=>"123"}`) are
@@ -201,13 +264,19 @@ BookApp = proc {|env|
 }
 ```
 
+Key name can be changed by ``env_key:`` keyword argument of ``JetRouter.new()``.
+
+```ruby
+router = Rack::JetRouter.new(mapping, env_key: "rack.urlpath_params")
+```
+
 If you want to tweak URL path parameters, define subclass of Rack::JetRouter
-and override `#build_urlpath_parameter_vars(env, vars)`.
+and override `#build_param_values(names, values)`.
 
 ```ruby
 class MyRouter < JetRouter
 
-  def build_urlpath_parameter_vars(names, values)
+  def build_param_values(names, values)
     return names.zip(values).each_with_object({}) {|(k, v), d|
       ## converts urlpath pavam value into integer
       v = v.to_i if k == 'id' || k.end_with?('_id')
@@ -219,7 +288,66 @@ end
 ```
 
 
-### Auto-redirection.
+### Integer Type Parameters
+
+Keyword argument ``int_param:`` of ``JetRouter.new()`` specifies
+parameter name pattern (regexp) to treat as integer type.
+For example, ``int_param: /(?:\A|_)id\z/`` treats ``id`` or ``xxx_id``
+parameter values as integer type.
+
+```ruby
+require 'rack'
+require 'rack/jet_router'
+
+rack_app = proc {|env|
+  params = env['rack.urlpath_params']
+  type = params["book_id"].class
+  text = "params=#{params.inspect}, type=#{type}"
+  [200, {}, [text]]
+}
+
+mapping = [
+  ["/api/books/:book_id", rack_app]
+]
+router = Rack::JetRouter.new(mapping, int_param: /(?:\A|_)id\z/
+
+env = Rack::MockRequest.env_for("/api/books/123")
+tuple = router.call(env)
+puts tuple[2]     #=> params={"book_id"=>123}, type=Integer
+```
+
+Integer type parameters match to only integers.
+
+```ruby
+env = Rack::MockRequest.env_for("/api/books/FooBar")
+tuple = router.call(env)
+puts tuple[2]     #=> 404 Not Found
+```
+
+
+### URL Path Multiple Extension
+
+It is available to specify multiple extension of URL path.
+
+```ruby
+mapping = {
+    "/api/books" => {
+        "/:id(.html|.json)"  => book_api,
+    },
+}
+```
+
+In above example, the following URL path patterns are enabled.
+
+* ``/api/books/:id``
+* ``/api/books/:id.html``
+* ``/api/books/:id.json``
+
+Notice that ``env['rack.urlpath_params']['format']`` is not set
+because ``:format`` is not specified in URL path pattern.
+
+
+### Auto-redirection
 
 Rack::JetRouter implements auto-redirection.
 
