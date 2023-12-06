@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
   spec.require_path  = "lib"
   spec.test_files    = Dir["test/**/*_test.rb"]   # or: ["test/run_all.rb"]
 
-  spec.required_ruby_version = ">= 2.3"
+  spec.required_ruby_version = ">= 2.4"
   spec.add_development_dependency "oktest"            , "~> 1"
   spec.add_development_dependency "benchmarker"       , "~> 1"
 end
