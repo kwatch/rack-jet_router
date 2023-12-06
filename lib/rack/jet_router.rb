@@ -296,12 +296,6 @@ module Rack
       end
     end
 
-    ## Determines whether a parameter represents id or not. Override if necessary.
-    def id_param?(param)
-      #; [!ree3r] returns true if param name is 'id' or 'xxx_id'.
-      return param == "id" || param.end_with?("_id")
-    end
-
     public
 
     def normalize_method_mapping(dict)   # called from Builder class
