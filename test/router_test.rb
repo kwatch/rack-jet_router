@@ -304,7 +304,7 @@ Oktest.scope do
             "/api/books.html" => book_list_api,
           }
           _.ok {@variable_endpoints} == [
-            [%r!\A/api/books(?:\.json|\.([^./?]+)|\.html)?\z!,
+            [%r!\A/api/books(?:\.([^./?]+))?\z!,
              ["format"], book_list_api, (10..-1)],
           ]
         end

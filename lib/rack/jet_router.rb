@@ -147,16 +147,16 @@ module Rack
         #; [!ylyi0] stores '/foo' as fixed path when path pattern is '/foo(.:format)'.
         elsif path =~ /\A([^:\(\)]*)\(([^\(\)]+)\)\z/
           @fixed_endpoints[$1] = item unless $1.empty?
-          has_param = false
+          arr = []
           $2.split('|').each do |s|
             next if s.empty?
             if s.include?(':')
-              has_param = true
+              arr << s
             else
               @fixed_endpoints[$1 + s] = item
             end
           end
-          variable_pairs << [path, item] if has_param
+          variable_pairs << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
         else
           variable_pairs << [path, item]
         end
