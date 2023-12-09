@@ -2,6 +2,12 @@ CHANGES
 =======
 
 
+Release 1.3.1 (2023-12-10)
+--------------------------
+
+* [bugfix] Fixed to correctly handle suffixed URL path pattern such as `/foo(.:format)`.
+
+
 Release 1.3.0 (2023-12-09)
 --------------------------
 
