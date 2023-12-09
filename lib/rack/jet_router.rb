@@ -231,11 +231,12 @@ module Rack
       index = m.captures.index('')
       return nil unless index
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj, range = @variable_endpoints[index]
+      full_urlpath_rexp, param_names, obj, range, sep = @variable_endpoints[index]
       if range
         ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
         str = req_path[range]
-        values = [str]
+        ## `"/a/1/b/2"[3..-1].split('/b/')` is faster than `%r!\A/a/(\d+)/b/(\d+)\z!.match("/a/1/b/2").captures`
+        values = sep ? str.split(sep) : [str]
       else
         m = full_urlpath_rexp.match(req_path)
         values = m.captures
@@ -415,9 +416,13 @@ module Rack
           end
           sb << '\z'
           #; [!kz8m7] range object should be included into tuple if only one param exist.
-          range = @enable_range ? _range_of_urlpath_param(path) : nil
+          if @enable_range
+            range, separator = _range_of_urlpath_param(path)
+          else
+            range = separator = nil
+          end
           #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
-          d[nil] = [Regexp.compile(sb.join()), params, item, range]
+          d[nil] = [Regexp.compile(sb.join()), params, item, range, separator]
         end
         return tree
       end
@@ -562,6 +567,7 @@ module Rack
         #; [!93itq] returns nil if urlpath pattern includes optional parameters.
         return nil if urlpath_pattern =~ /\(/
         #; [!syrdh] returns Range object when urlpath_pattern contains just one param.
+        #; [!elsdx] returns Range and separator string when urlpath_pattern contains two params.
         #; [!skh4z] returns nil when urlpath_pattern contains more than two params.
         #; [!acj5b] returns nil when urlpath_pattern contains no params.
         rexp = /:\w+/
@@ -569,7 +575,11 @@ module Rack
         case arr.length
         when 2                                  # ex: arr == ['/books/', '.json']
           range = arr[0].length .. -(arr[1].length+1)
-          return range                          # ex: (7..-6), nil
+          return range, nil                     # ex: (7..-6), nil
+        when 3                                  # ex: arr == ['/books/', '/comments/', '.json']
+          return nil if arr[1].empty?
+          range = arr[0].length .. -(arr[2].length+1)
+          return range, arr[1]                  # ex: (7..-6), '/comments/'
         else
           return nil
         end

@@ -305,7 +305,7 @@ Oktest.scope do
           }
           _.ok {@variable_endpoints} == [
             [%r!\A/api/books(?:\.([^./?]+))?\z!,
-             ["format"], book_list_api, nil],
+             ["format"], book_list_api, nil, nil],
           ]
         end
 
@@ -326,11 +326,11 @@ Oktest.scope do
         }
         @router.instance_exec(self) do |_|
           _.ok {@variable_endpoints} == [
-            [%r'\A/api/books/(#{id})\z',      ['id'], book_show_api, (11..-1)],
-            [%r'\A/api/books/(#{id})/edit\z', ['id'], book_edit_api, (11..-6)],
-            [%r'\A/api/books/(#{id})/comments\z',          ['book_id'], comment_create_api, (11..-10)],
-            [%r'\A/api/books/(#{id})/comments/(#{id})\z', ['book_id', 'comment_id'], comment_update_api, nil],
-            [%r'\A/admin/books/(#{id})\z', ['id'], map2, (13..-1)],
+            [%r'\A/api/books/(#{id})\z',      ['id'], book_show_api, (11..-1), nil],
+            [%r'\A/api/books/(#{id})/edit\z', ['id'], book_edit_api, (11..-6), nil],
+            [%r'\A/api/books/(#{id})/comments\z',         ['book_id'], comment_create_api, (11..-10), nil],
+            [%r'\A/api/books/(#{id})/comments/(#{id})\z', ['book_id', 'comment_id'], comment_update_api, (11..-1), '/comments/'],
+            [%r'\A/admin/books/(#{id})\z', ['id'], map2, (13..-1), nil],
           ]
         end
       end

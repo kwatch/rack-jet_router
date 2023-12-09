@@ -51,19 +51,19 @@ Oktest.scope do
           "/api/books/" => {
             :'[^./?]+' => {
               nil => [/\A\/api\/books\/(#{id})\z/,
-                      ["id"], book_show_api, 11..-1],
+                      ["id"], book_show_api, 11..-1, nil],
               "/" => {
                 "edit" => {
                   nil => [/\A\/api\/books\/(#{id})\/edit\z/,
-                          ["id"], book_edit_api, 11..-6],
+                          ["id"], book_edit_api, 11..-6, nil],
                 },
                 "comments" => {
                   nil => [/\A\/api\/books\/(#{id})\/comments\z/,
-                          ["book_id"], comment_create_api, 11..-10],
+                          ["book_id"], comment_create_api, 11..-10, nil],
                   "/" => {
                     :'[^./?]+' => {
                       nil => [/\A\/api\/books\/(#{id})\/comments\/(#{id})\z/,
-                              ["book_id", "comment_id"], comment_update_api, nil],
+                              ["book_id", "comment_id"], comment_update_api, (11..-1), '/comments/'],
                     },
                   },
                 },
@@ -85,11 +85,11 @@ Oktest.scope do
             :"[^./?]+" => {
               "/comments" => {
                 nil => [%r`\A/api/books/(#{id})/comments\z`,
-                        ["book_id"], {"POST"=>comment_create_api}, (11..-10)],
+                        ["book_id"], {"POST"=>comment_create_api}, (11..-10), nil],
                 "/" => {
                   :"[^./?]+" => {
                     nil => [%r`\A/api/books/(#{id})/comments/(#{id})\z`,
-                            ["book_id", "id"], {"PUT"=>comment_update_api}, nil],
+                            ["book_id", "id"], {"PUT"=>comment_update_api}, (11..-1), '/comments/'],
                   },
                 },
               },
@@ -109,12 +109,12 @@ Oktest.scope do
           "/api/books" => {
             :"(?:\\.[^./?]+)?" => {
               nil => [%r`\A/api/books(?:\.(#{id}))?\z`,
-                      ["format"], {"GET"=>book_list_api}, nil]},
+                      ["format"], {"GET"=>book_list_api}, nil, nil]},
             "/" => {
               :"[^./?]+" => {
                 :"(?:\\.[^./?]+)?" => {
                   nil => [%r`\A/api/books/(#{id})(?:\.(#{id}))?\z`,
-                          ["id", "format"], {"GET"=>book_show_api}, nil],
+                          ["id", "format"], {"GET"=>book_show_api}, nil, nil],
                 },
               },
             },
@@ -178,7 +178,7 @@ Oktest.scope do
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple} == [%r`\A/api/books/(#{id})\.json\z`,
-                       ["id"], book_show_api, (11..-6)]
+                       ["id"], book_show_api, (11..-6), nil]
       end
 
       spec "[!c6xmp] tuple should be stored into nested dict with key 'nil'." do
@@ -192,7 +192,7 @@ Oktest.scope do
             :"[^./?]+" => {
               ".json" => {
                 nil => [%r`\A/api/books/(#{id})\.json\z`,
-                        ["id"], book_show_api, (11..-6)],
+                        ["id"], book_show_api, (11..-6), nil],
               },
             },
           },
@@ -625,19 +625,33 @@ Oktest.scope do
 
       spec "[!syrdh] returns Range object when urlpath_pattern contains just one param." do
         @builder.instance_exec(self) do |_|
-          r1 = _range_of_urlpath_param('/books/:id')
-          _.ok {r1} == (7..-1)
-          _.ok {'/books/123'[r1]} == '123'
-          r2 = _range_of_urlpath_param('/books/:id.html')
-          _.ok {r2} == (7..-6)
-          _.ok {'/books/4567.html'[r2]} == '4567'
+          t = _range_of_urlpath_param('/books/:id')
+          _.ok {t} == [(7..-1), nil]
+          _.ok {'/books/123'[t[0]]} == '123'
+          #
+          t = _range_of_urlpath_param('/books/:id.html')
+          _.ok {t} == [(7..-6), nil]
+          _.ok {'/books/4567.html'[t[0]]} == '4567'
+        end
+      end
+
+      spec "[!elsdx] returns Range and separator string when urlpath_pattern contains two params." do
+        @builder.instance_exec(self) do |_|
+          t = _range_of_urlpath_param('/books/:id/comments/:comment_id.json')
+          _.ok {t} == [(7..-6), '/comments/']
+          _.ok {'/books/123/comments/456.json'[t[0]]} == "123/comments/456"
+          _.ok {'/books/123/comments/456.json'[t[0]].split(t[1])} == ["123", "456"]
+          #
+          t = _range_of_urlpath_param('/books/:id/comments/:comment_id')
+          _.ok {t} == [(7..-1), '/comments/']
+          _.ok {'/books/123/comments/456'[t[0]]} == "123/comments/456"
+          _.ok {'/books/123/comments/456'[t[0]].split(t[1])} == ["123", "456"]
         end
       end
 
       spec "[!skh4z] returns nil when urlpath_pattern contains more than two params." do
         @builder.instance_exec(self) do |_|
-          _.ok {_range_of_urlpath_param('/books/:book_id/comments/:comment_id')} == nil
-          _.ok {_range_of_urlpath_param('/books/:id(:format)')} == nil
+          _.ok {_range_of_urlpath_param('/books/:book_id/comments/:c_id/foo/:foo_id')} == nil
         end
       end
 
