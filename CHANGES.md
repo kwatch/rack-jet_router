@@ -9,6 +9,12 @@ Release 1.4.0 (????-??-??)
 * [enhance] Treats `/foo(.html|.json)` as three fixed paths `/foo`, `/foo.html` and `/foo.json`. This is much faster than `/foo(.:format)`.
 
 
+Release 1.3.1 (2023-12-10)
+--------------------------
+
+* [bugfix] Fixed to correctly handle suffixed URL path pattern such as `/foo(.:format)`.
+
+
 Release 1.3.0 (2023-12-09)
 --------------------------
 
