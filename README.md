@@ -339,6 +339,8 @@ puts tuple[2]     #=> 404 Not Found
 ```
 
 
+<!--
+
 ### URL Path Multiple Extension
 
 It is available to specify multiple extension of URL path.
@@ -359,6 +361,8 @@ In above example, the following URL path patterns are enabled.
 
 Notice that ``env['rack.urlpath_params']['format']`` is not set
 because ``:format`` is not specified in URL path pattern.
+
+-->
 
 
 ### Auto-redirection
