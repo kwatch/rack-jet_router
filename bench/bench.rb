@@ -237,7 +237,8 @@ end
 
 N = ($opt_N || 100000).to_i
 title = "Router library benchmark"
-Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
+width = target_urlpaths.collect(&:length).max()
+Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
   puts "** N=#{N}"
   puts ""
