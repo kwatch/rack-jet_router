@@ -56,7 +56,7 @@ Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/releas
 ### JetRouter vs. Rack::Multiplexer:
 
 ```
-## Ranking                             real
+## Ranking                         usec/req  Graph (longer=faster)
 (JetRouter)      /api/aaa01          0.2816 (100.0%) ********************
 (JetRouter)      /api/zzz26          0.2823 ( 99.7%) ********************
 (Multiplexer)    /api/aaa01          1.2586 ( 22.4%) ****
@@ -74,7 +74,7 @@ Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/releas
 ### JetRouter vs. Hanami::Router
 
 ```
-## Ranking                             real
+## Ranking                         usec/req  Graph (longer=faster)
 (JetRouter)      /api/aaa01          0.2816 (100.0%) ********************
 (JetRouter)      /api/zzz26          0.2823 ( 99.7%) ********************
 (Hanami::Router) /api/zzz26          1.3280 ( 21.2%) ****
