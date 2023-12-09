@@ -136,15 +136,33 @@ module Rack
       #
       #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, _enable_range)
+      param_rexp = /:\w+|\(.*?\)/
+      variable_pairs = []
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
+        #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
+        if path !~ param_rexp
+          @fixed_endpoints[path] = item
+        #; [!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths.
+        #; [!ylyi0] stores '/foo' as fixed path when path pattern is '/foo(.:format)'.
+        elsif path =~ /\A([^:\(\)]*)\(([^\(\)]+)\)\z/
+          @fixed_endpoints[$1] = item unless $1.empty?
+          arr = []
+          $2.split('|').each do |s|
+            next if s.empty?
+            if s.include?(':')
+              arr << s
+            else
+              @fixed_endpoints[$1 + s] = item
+            end
+          end
+          variable_pairs << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
+        else
+          variable_pairs << [path, item]
+        end
       end
-      #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
-      param_rexp = /:\w+|\(.*?\)/
-      pairs1, pairs2 = @all_endpoints.partition {|path, _| path =~ param_rexp }
-      pairs2.each {|path, item| @fixed_endpoints[path] = item }
       #; [!saa1a] compiles compound urlpath regexp.
-      tree = builder.build_tree(pairs1)
+      tree = builder.build_tree(variable_pairs)
       @urlpath_rexp = builder.build_rexp(tree) do |tuple|
         #; [!f1d7s] builds variable endpoint list.
         @variable_endpoints << tuple
@@ -378,6 +396,7 @@ module Rack
             str = path[pos, m.begin(0) - pos]
             pos = m.end(0)
             #; [!akkkx] converts urlpath param into regexp.
+            #; [!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'.
             pat1, pat2 = _param_patterns(param, optional) do |param_|
               param_.freeze
               params << (param_d[param_] ||= param_)
@@ -485,12 +504,16 @@ module Rack
         #; [!69yj9] optional string can contains other params.
         elsif optional
           sb = ['(?:']
-          optional.scan(/(.*?)(?::(\w+))/) do |str, param_|
-            pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
-            sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
-            yield param_
+          #; [!oh9c6] optional string can have '|' (OR).
+          optional.split('|').each_with_index do |string, i|
+            sb << '|' if i > 0
+            string.scan(/(.*?)(?::(\w+))/) do |str, param_|
+              pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
+              sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
+              yield param_
+            end
+            sb << Regexp.escape($' || string)
           end
-          sb << Regexp.escape($' || optional)
           sb << ')?'
           s = sb.join()
           pat1 = s.gsub('<<', '' ).gsub('>>', '' )    # ex: '(?:\.[^./?]+)?'
