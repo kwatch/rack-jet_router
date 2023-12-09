@@ -427,6 +427,6 @@ Above methods are invoked from `Rack::JetRouter#call()`.
 
 ## Copyright and License
 
-$Copyright: copyright(c) 2015-2016 kuwata-lab.com all rights reserved $
+$Copyright: copyright(c) 2015 kwatch@gmail.com $
 
 $License: MIT License $
