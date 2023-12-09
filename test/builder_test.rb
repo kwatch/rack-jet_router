@@ -109,7 +109,7 @@ Oktest.scope do
           "/api/books" => {
             :"(?:\\.[^./?]+)?" => {
               nil => [%r`\A/api/books(?:\.(#{id}))?\z`,
-                      ["format"], {"GET"=>book_list_api}, (10..-1)]},
+                      ["format"], {"GET"=>book_list_api}, nil]},
             "/" => {
               :"[^./?]+" => {
                 :"(?:\\.[^./?]+)?" => {
@@ -597,6 +597,13 @@ Oktest.scope do
 
 
     topic '#range_of_urlpath_param()' do
+
+      spec "[!93itq] returns nil if urlpath pattern includes optional parameters." do
+        @builder.instance_exec(self) do |_|
+          r1 = _range_of_urlpath_param('/books(.:format)')
+          _.ok {r1} == nil
+        end
+      end
 
       spec "[!syrdh] returns Range object when urlpath_pattern contains just one param." do
         @builder.instance_exec(self) do |_|
