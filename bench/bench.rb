@@ -1,4 +1,14 @@
 # -*- coding: utf-8 -*-
+# frozen_string_literal: true
+
+##
+## Usage:
+##   $ gem install bundler
+##   $ bundler install
+##   $ ruby bench.rb --N=1000_000
+##   $ ruby bench.rb --N=1000_000 --rack=0 --sinatra=0 --multiplexer=0 # --hanami=0 --jetrouter=0 --keight=0
+##
+
 
 $LOAD_PATH << File.absolute_path("../../lib", __FILE__)
 
@@ -236,29 +246,30 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
   task nil do
     i = 0; n = N
     while (i += 1) <= n
-      newenv("/api")
+      #newenv("/api")
     end
   end
-
 
   ### Rack
   if flag_rack
     #target_urlpaths.each do |x|
     #  rack_app1.call(newenv(x))              # warm up
     #  task "(Rack plain app) #{x}" do        # no routing
+    #    env = newenv(x)
     #    i = 0; n = N
     #    while (i += 1) <= n
-    #      tuple = rack_app1.call(newenv(x))
+    #      tuple = rack_app1.call(env)
     #    end
     #    tuple
     #  end
     #end
     target_urlpaths.each do |x|
-      rack_app4.call(newenv(x))              # warm up
+      rack_app4.call(newenv(x))            # warm up
       task "(Rack::Req+Res)  #{x}" do        # no routing
+        env = newenv(x)
         i = 0; n = N
         while (i += 1) <= n
-          tuple = rack_app4.call(newenv(x))
+          tuple = rack_app4.call(env)
         end
         tuple
       end
@@ -270,9 +281,10 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     target_urlpaths.each do |x|
       jet_router.call(newenv(x))             # warm up
       task "(JetRouter)      #{x}" do
+        env = newenv(x)
         i = 0; n = N
         while (i += 1) <= n
-          tuple = jet_router.call(newenv(x))
+          tuple = jet_router.call(env)
         end
         tuple
       end
@@ -284,9 +296,10 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     target_urlpaths.each do |x|
       mpx_app.call(newenv(x))                # warm up
       task "(Multiplexer)    #{x}" do
+        env = newenv(x)
         i = 0; n = N
         while (i += 1) <= n
-          tuple = mpx_app.call(newenv(x))
+          tuple = mpx_app.call(env)
         end
         tuple
       end
@@ -298,9 +311,10 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     target_urlpaths.each do |x|
       sina_app.call(newenv(x))               # warm up
       task "(Sinatra)        #{x}" do
+        env = newenv(x)
         i = 0; n = N
         while (i += 1) <= n
-          tuple = sina_app.call(newenv(x))
+          tuple = sina_app.call(env)
         end
         tuple
       end
@@ -312,9 +326,10 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     target_urlpaths.each do |x|
       k8_app.call(newenv(x))                 # warm up
       task "(Keight)         #{x}" do
+        env = newenv(x)
         i = 0; n = N
         while (i += 1) <= n
-          tuple = k8_app.call(newenv(x))
+          tuple = k8_app.call(env)
         end
         tuple
       end
@@ -326,9 +341,10 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     target_urlpaths.each do |x|
       hanami_app.call(newenv(x))          # warm up
       task "(Hanami::Router) #{x}" do
+        env = newenv(x)
         i = 0; n = N
         while (i += 1) <= n
-          tuple = hanami_app.call(newenv(x))
+          tuple = hanami_app.call(env)
         end
         tuple
       end
