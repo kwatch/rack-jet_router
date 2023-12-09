@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
 # frozen_string_literal: true
 
+##
+## Usage:
+##   $ gem install bundler
+##   $ bundler install
+##   $ ruby bench.rb --N=1000_000
+##   $ ruby bench.rb --N=1000_000 --rack=0 --sinatra=0 --multiplexer=0 # --hanami=0 --jetrouter=0 --keight=0
+##
+
+
 $LOAD_PATH << File.absolute_path("../../lib", __FILE__)
 
 require 'benchmarker'
