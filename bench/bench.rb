@@ -237,7 +237,8 @@ end
 
 N = ($opt_N || 100000).to_i
 title = "Router library benchmark"
-Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
+width = target_urlpaths.collect(&:length).max()
+Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0) do
 
   puts "** N=#{N}"
   puts ""
@@ -264,7 +265,7 @@ Benchmarker.scope(title, width: 33, loop: 1, iter: 1, extra: 0, sleep: 0) do
     #  end
     #end
     target_urlpaths.each do |x|
-      rack_app4.call(newenv(x))            # warm up
+      rack_app4.call(newenv(x))              # warm up
       task "(Rack::Req+Res)  #{x}" do        # no routing
         env = newenv(x)
         i = 0; n = N
