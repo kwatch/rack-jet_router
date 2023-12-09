@@ -2,7 +2,7 @@ CHANGES
 =======
 
 
-Release 1.3.0 (????-??-??)
+Release 1.3.0 (2023-12-09)
 --------------------------
 
 * [enhance] Performance has improved (about 10%). This improvement was achieved by optimizing regular expressions.

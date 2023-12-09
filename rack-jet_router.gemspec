@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "rack-jet_router"
-  spec.version       = "$Release: 0.0.0 $".split()[1]
+  spec.version       = "$Release: 1.3.0 $".split()[1]
   spec.author        = "kwatch"
   spec.email         = "kwatch@gmail.com"
   spec.platform      = Gem::Platform::RUBY

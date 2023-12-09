@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 ###
-### $Release: 0.0.0 $
+### $Release: 1.3.0 $
 ### $Copyright: copyright(c) 2015 kwatch@gmail.com $
 ### $License: MIT License $
 ###
@@ -81,7 +81,7 @@ module Rack
   ##
   class JetRouter
 
-    RELEASE = '$Release: 0.0.0 $'.split()[1]
+    RELEASE = '$Release: 1.3.0 $'.split()[1]
 
     #; [!haggu] contains available request methods.
     REQUEST_METHODS = %w[GET POST PUT DELETE PATCH HEAD OPTIONS TRACE LINK UNLINK] \
