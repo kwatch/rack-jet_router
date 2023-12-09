@@ -265,7 +265,7 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
     #  end
     #end
     target_urlpaths.each do |x|
-      rack_app4.call(newenv(x))            # warm up
+      rack_app4.call(newenv(x))              # warm up
       task "(Rack::Req+Res)  #{x}" do        # no routing
         env = newenv(x)
         i = 0; n = N
