@@ -2,7 +2,14 @@ CHANGES
 =======
 
 
-Release 1.3.0 (????-??-??)
+Release 1.4.0 (????-??-??)
+--------------------------
+
+* [enhance] Supports `(.html|.json)` style pattern.
+* [enhance] Treats `/foo(.html|.json)` as three fixed paths `/foo`, `/foo.html` and `/foo.json`. This is much faster than `/foo(.:format)`.
+
+
+Release 1.3.0 (2023-12-09)
 --------------------------
 
 * [enhance] Performance has improved (about 10%). This improvement was achieved by optimizing regular expressions.
