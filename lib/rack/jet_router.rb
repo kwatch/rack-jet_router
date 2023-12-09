@@ -558,16 +558,21 @@ module Rack
         sb << ')' if nested_dict.length > 1
       end
 
-      def _range_of_urlpath_param(urlpath_pattern)      # ex: '/books/:id/edit'
+      def _range_of_urlpath_param(urlpath_pattern)      # ex: '/books/:id/comments/:comment_id.json'
         #; [!93itq] returns nil if urlpath pattern includes optional parameters.
         return nil if urlpath_pattern =~ /\(/
         #; [!syrdh] returns Range object when urlpath_pattern contains just one param.
         #; [!skh4z] returns nil when urlpath_pattern contains more than two params.
         #; [!acj5b] returns nil when urlpath_pattern contains no params.
         rexp = /:\w+/
-        arr = urlpath_pattern.split(rexp, -1)          # ex: ['/books/', '/edit']
-        return nil unless arr.length == 2
-        return (arr[0].length .. -(arr[1].length+1))   # ex: 7..-6  (Range object)
+        arr = urlpath_pattern.split(rexp, -1)   # ex: ['/books/', '/comments/', '.json']
+        case arr.length
+        when 2                                  # ex: arr == ['/books/', '.json']
+          range = arr[0].length .. -(arr[1].length+1)
+          return range                          # ex: (7..-6), nil
+        else
+          return nil
+        end
       end
 
     end
