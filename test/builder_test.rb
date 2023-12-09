@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ###
-### $Release: 1.3.0 $
+### $Release: 1.3.1 $
 ### $Copyright: copyright(c) 2015 kwatch@gmail.com $
 ### $License: MIT License $
 ###
