@@ -559,10 +559,12 @@ module Rack
       end
 
       def _range_of_urlpath_param(urlpath_pattern)      # ex: '/books/:id/edit'
+        #; [!93itq] returns nil if urlpath pattern includes optional parameters.
+        return nil if urlpath_pattern =~ /\(/
         #; [!syrdh] returns Range object when urlpath_pattern contains just one param.
         #; [!skh4z] returns nil when urlpath_pattern contains more than two params.
         #; [!acj5b] returns nil when urlpath_pattern contains no params.
-        rexp = /:\w+|\(.*?\)/
+        rexp = /:\w+/
         arr = urlpath_pattern.split(rexp, -1)          # ex: ['/books/', '/edit']
         return nil unless arr.length == 2
         return (arr[0].length .. -(arr[1].length+1))   # ex: 7..-6  (Range object)

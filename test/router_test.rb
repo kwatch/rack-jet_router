@@ -305,7 +305,7 @@ Oktest.scope do
           }
           _.ok {@variable_endpoints} == [
             [%r!\A/api/books(?:\.([^./?]+))?\z!,
-             ["format"], book_list_api, (10..-1)],
+             ["format"], book_list_api, nil],
           ]
         end
 
