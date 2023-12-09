@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# frozen_string_literal: true
 
 $LOAD_PATH << File.absolute_path("../../lib", __FILE__)
 
