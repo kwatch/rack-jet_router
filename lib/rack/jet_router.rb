@@ -137,7 +137,7 @@ module Rack
       #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, _enable_range)
       param_rexp = /:\w+|\(.*?\)/
-      variable_pairs = []
+      tmplist = []
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
         #; [!l63vu] handles urlpath pattern as fixed when no urlpath params.
@@ -156,13 +156,13 @@ module Rack
               @fixed_endpoints[$1 + s] = item
             end
           end
-          variable_pairs << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
+          tmplist << ["#{$1}(#{arr.join('|')})", item] unless arr.empty?
         else
-          variable_pairs << [path, item]
+          tmplist << [path, item]
         end
       end
       #; [!saa1a] compiles compound urlpath regexp.
-      tree = builder.build_tree(variable_pairs)
+      tree = builder.build_tree(tmplist)
       @urlpath_rexp = builder.build_rexp(tree) do |tuple|
         #; [!f1d7s] builds variable endpoint list.
         @variable_endpoints << tuple
