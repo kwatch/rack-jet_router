@@ -383,12 +383,12 @@ module Rack
       def build_tree(entrypoint_pairs)
         #; [!6oa05] builds nested hash object from mapping data.
         tree = {}         # tree is a nested dict
-        param_d = {}
+        pnames_d = {}
         entrypoint_pairs.each do |path, item|
           d = tree
           sb = ['\A']
           pos = 0
-          params = []
+          pnames = []
           #; [!uyupj] handles urlpath parameter such as ':id'.
           #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
           path.scan(/:(\w+)|\((.*?)\)/) do
@@ -398,9 +398,9 @@ module Rack
             pos = m.end(0)
             #; [!akkkx] converts urlpath param into regexp.
             #; [!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'.
-            pat1, pat2 = _param_patterns(param, optional) do |param_|
-              param_.freeze
-              params << (param_d[param_] ||= param_)
+            pat1, pat2 = _param_patterns(param, optional) do |pname|
+              pname.freeze
+              pnames << (pnames_d[pname] ||= pname)
             end
             #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
             d = _next_dict(d, str) unless str.empty?
@@ -422,7 +422,7 @@ module Rack
             range = separator = nil
           end
           #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
-          d[nil] = [Regexp.compile(sb.join()), params, item, range, separator]
+          d[nil] = [Regexp.compile(sb.join()), pnames, item, range, separator]
         end
         return tree
       end
