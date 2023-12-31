@@ -386,35 +386,11 @@ module Rack
         pnames_d = {}
         entrypoint_pairs.each do |path, item|
           d = tree
-          sb = ['\A']
-          pos = 0
-          pnames = []
-          #; [!uyupj] handles urlpath parameter such as ':id'.
-          #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
-          path.scan(/:(\w+)|\((.*?)\)/) do
-            param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
-            m = Regexp.last_match()
-            str = path[pos, m.begin(0) - pos]
-            pos = m.end(0)
-            #; [!akkkx] converts urlpath param into regexp.
-            #; [!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'.
-            pat1, pat2 = _param_patterns(param, optional) do |pname|
-              pname.freeze
-              pnames << (pnames_d[pname] ||= pname)
-            end
+          rexp, pnames = _parse_path(path, pnames_d) do |str, pat1|
             #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
             d = _next_dict(d, str) unless str.empty?
-            d = (d[pat1.intern] ||= {})       # ex: pat1=='[^./?]+'
-            #; [!zoym3] urlpath string should be escaped.
-            sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
+            d = (d[pat1.intern] ||= {}) if pat1      # ex: pat1=='[^./?]+'
           end
-          #; [!o642c] remained string after param should be handled correctly.
-          str = pos == 0 ? path : path[pos..-1]
-          unless str.empty?
-            d = _next_dict(d, str)
-            sb << Regexp.escape(str)          # ex: str=='.html'
-          end
-          sb << '\z'
           #; [!kz8m7] range object should be included into tuple if only one param exist.
           if @enable_range
             range, separator = _range_of_urlpath_param(path)
@@ -422,12 +398,43 @@ module Rack
             range = separator = nil
           end
           #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
-          d[nil] = [Regexp.compile(sb.join()), pnames, item, range, separator]
+          d[nil] = [rexp, pnames, item, range, separator]
         end
         return tree
       end
 
       private
+
+      def _parse_path(path, pnames_d, &b)
+        sb = ['\A']
+        pos = 0
+        pnames = []
+        #; [!uyupj] handles urlpath parameter such as ':id'.
+        #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
+        path.scan(/:(\w+)|\((.*?)\)/) do
+          param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
+          m = Regexp.last_match()
+          str = path[pos, m.begin(0) - pos]
+          pos = m.end(0)
+          #; [!akkkx] converts urlpath param into regexp.
+          #; [!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'.
+          pat1, pat2 = _param_patterns(param, optional) do |pname|
+            pname.freeze
+            pnames << (pnames_d[pname] ||= pname)
+          end
+          yield str, pat1
+          #; [!zoym3] urlpath string should be escaped.
+          sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
+        end
+        #; [!o642c] remained string after param should be handled correctly.
+        str = pos == 0 ? path : path[pos..-1]
+        unless str.empty?
+          yield str, nil
+          sb << Regexp.escape(str)          # ex: str=='.html'
+        end
+        sb << '\z'
+        return Regexp.compile(sb.join()), pnames
+      end
 
       def _next_dict(d, str)
         #; [!s1rzs] if new key exists in dict...
