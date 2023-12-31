@@ -410,8 +410,9 @@ module Rack
         pos = 0
         pnames = []
         #; [!uyupj] handles urlpath parameter such as ':id'.
+        #; [!k7oxt] handles urlpath parameter such as ':filepath'.
         #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
-        path.scan(/(:\w+)|\((.*?)\)/) do
+        path.scan(/([:*]\w+)|\((.*?)\)/) do
           param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
           m = Regexp.last_match()
           str = path[pos, m.begin(0) - pos]
@@ -425,6 +426,11 @@ module Rack
           yield str, pat1
           #; [!zoym3] urlpath string should be escaped.
           sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
+          #; [!2axyy] raises error if '*path' param is not at end of path.
+          if param =~ /\A\*/
+            pos == path.length  or
+              raise ArgumentError.new("#{path}: Invalid path parameter ('#{param}' should be at end of the path).")
+          end
         end
         #; [!o642c] remained string after param should be handled correctly.
         str = pos == 0 ? path : path[pos..-1]
@@ -503,12 +509,13 @@ module Rack
 
       def _param_patterns(param, optional, &callback)
         #; [!j90mw] returns '[^./?]+' and '([^./?]+)' if param specified.
+        #; [!jbvyb] returns '.*' and '(.*)' if param is like '*filepath'.
         if param
           optional == nil  or raise "** internal error"
-          param =~ /\A:(\w+)\z/  or raise "** internal error"
-          pname = $1
+          param =~ /\A([:*])(\w+)\z/  or raise "** internal error"
+          pname = $2
           yield pname
-          pat1 = _param2rexp(pname)     # ex: '[^./?]+'
+          pat1 = $1 == '*' ? '.*' : _param2rexp(pname)  # ex: '[^./?]+'
           pat2 = "(#{pat1})"
         #; [!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'.
         elsif optional == ".:format"
@@ -579,7 +586,7 @@ module Rack
         #; [!elsdx] returns Range and separator string when urlpath_pattern contains two params.
         #; [!skh4z] returns nil when urlpath_pattern contains more than two params.
         #; [!acj5b] returns nil when urlpath_pattern contains no params.
-        rexp = /:\w+/
+        rexp = /[:*]\w+/
         arr = urlpath_pattern.split(rexp, -1)   # ex: ['/books/', '/comments/', '.json']
         case arr.length
         when 2                                  # ex: arr == ['/books/', '.json']
