@@ -5,6 +5,7 @@ CHANGES
 Release 1.4.0 (????-??-??)
 --------------------------
 
+* [enhance] Supports '*file' style path parameter.
 * [enhance] Supports `(.html|.json)` style pattern.
 * [enhance] Treats `/foo(.html|.json)` as three fixed paths `/foo`, `/foo.html` and `/foo.json`. This is much faster than `/foo(.:format)`.
 
