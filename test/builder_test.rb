@@ -182,7 +182,7 @@ Oktest.scope do
         ]
         pr = proc { @builder.build_tree(endpoint_pairs) }
         ok {pr}.raise?(ArgumentError,
-                       "/static/*filepath.css: Invalid path parameter ('*filepath' should be at end of path).")
+                       "/static/*filepath.css: Invalid path parameter ('*filepath' should be at end of the path).")
       end
 
       spec "[!o642c] remained string after param should be handled correctly." do
