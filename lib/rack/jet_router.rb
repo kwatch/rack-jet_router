@@ -386,11 +386,14 @@ module Rack
         pnames_d = {}
         entrypoint_pairs.each do |path, item|
           d = tree
-          rexp, pnames = _parse_path(path, pnames_d) do |str, pat1|
+          sb = ['\A']
+          pnames = _parse_path(path, sb, pnames_d) do |str, pat1|
             #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
             d = _next_dict(d, str) unless str.empty?
             d = (d[pat1.intern] ||= {}) if pat1      # ex: pat1=='[^./?]+'
           end
+          sb << '\z'
+          rexp = Regexp.compile(sb.join())
           #; [!kz8m7] range object should be included into tuple if only one param exist.
           if @enable_range
             range, separator = _range_of_urlpath_param(path)
@@ -405,8 +408,7 @@ module Rack
 
       private
 
-      def _parse_path(path, pnames_d, &b)
-        sb = ['\A']
+      def _parse_path(path, sb, pnames_d, &b)
         pos = 0
         pnames = []
         #; [!uyupj] handles urlpath parameter such as ':id'.
@@ -438,8 +440,7 @@ module Rack
           yield str, nil
           sb << Regexp.escape(str)          # ex: str=='.html'
         end
-        sb << '\z'
-        return Regexp.compile(sb.join()), pnames
+        return pnames
       end
 
       def _next_dict(d, str)
