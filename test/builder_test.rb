@@ -487,7 +487,7 @@ Oktest.scope do
 
       spec "[!j90mw] returns '[^./?]+' and '([^./?]+)' if param specified." do
         x = nil
-        s1, s2 = @builder.instance_eval { _param_patterns("id", nil) {|a| x = a } }
+        s1, s2 = @builder.instance_eval { _param_patterns(":id", nil) {|a| x = a } }
         ok {s1} == '[^./?]+'
         ok {s2} == '([^./?]+)'
         ok {x} == "id"

@@ -411,7 +411,7 @@ module Rack
         pnames = []
         #; [!uyupj] handles urlpath parameter such as ':id'.
         #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
-        path.scan(/:(\w+)|\((.*?)\)/) do
+        path.scan(/(:\w+)|\((.*?)\)/) do
           param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
           m = Regexp.last_match()
           str = path[pos, m.begin(0) - pos]
@@ -505,8 +505,10 @@ module Rack
         #; [!j90mw] returns '[^./?]+' and '([^./?]+)' if param specified.
         if param
           optional == nil  or raise "** internal error"
-          yield param
-          pat1 = _param2rexp(param)     # ex: '[^./?]+'
+          param =~ /\A:(\w+)\z/  or raise "** internal error"
+          pname = $1
+          yield pname
+          pat1 = _param2rexp(pname)     # ex: '[^./?]+'
           pat2 = "(#{pat1})"
         #; [!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'.
         elsif optional == ".:format"
@@ -519,10 +521,10 @@ module Rack
           #; [!oh9c6] optional string can have '|' (OR).
           optional.split('|').each_with_index do |string, i|
             sb << '|' if i > 0
-            string.scan(/(.*?)(?::(\w+))/) do |str, param_|
-              pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
+            string.scan(/(.*?)(?::(\w+))/) do |str, pname|
+              pat = _param2rexp(pname)                  # ex: pat == '[^./?]+'
               sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
-              yield param_
+              yield pname
             end
             sb << Regexp.escape($' || string)
           end
