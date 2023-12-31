@@ -136,7 +136,7 @@ module Rack
       #
       #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, _enable_range)
-      param_rexp = /:\w+|\(.*?\)/
+      param_rexp = /[:*]\w+|\(.*?\)/
       tmplist = []
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
@@ -145,7 +145,7 @@ module Rack
           @fixed_endpoints[path] = item
         #; [!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths.
         #; [!ylyi0] stores '/foo' as fixed path when path pattern is '/foo(.:format)'.
-        elsif path =~ /\A([^:\(\)]*)\(([^\(\)]+)\)\z/
+        elsif path =~ /\A([^:*\(\)]*)\(([^\(\)]+)\)\z/
           @fixed_endpoints[$1] = item unless $1.empty?
           arr = []
           $2.split('|').each do |s|
