@@ -359,6 +359,29 @@ Oktest.scope do
     end
 
 
+    topic '#_submapping?()' do
+
+      spec "[!qlp3f] returns false if item is like '{GET: ...}'." do
+        x = @builder.instance_eval { _submapping?({GET: 1, POST: 2}, Hash) }
+        ok {x} == false
+        x = @builder.instance_eval { _submapping?({"GET"=>1}, Hash) }
+        ok {x} == true
+      end
+
+      spec "[!1pmtl] returns true only if item class is same as mapping_class." do
+        x = @builder.instance_eval { _submapping?({"GET"=>1}, Hash) }
+        ok {x} == true
+        x = @builder.instance_eval { _submapping?(["GET", 1], Array) }
+        ok {x} == true
+        x = @builder.instance_eval { _submapping?({"GET"=>1}, Array) }
+        ok {x} == false
+        x = @builder.instance_eval { _submapping?(Map("GET"=>1), Array) }
+        ok {x} == false
+      end
+
+    end
+
+
     topic '#_next_dict()' do
 
       case_when "[!s1rzs] if new key exists in dict..." do

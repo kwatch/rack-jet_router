@@ -362,7 +362,7 @@ module Rack
         mapping.each do |sub_path, item|
           full_path = base_path + sub_path
           #; [!2ntnk] nested dict mapping can have subclass of Hash as handlers.
-          if item.class == mapping_class
+          if _submapping?(item, mapping_class)
             #; [!dj0sh] traverses mapping recursively.
             _traverse_mapping(item, full_path, mapping_class, &block)
           else
@@ -372,6 +372,13 @@ module Rack
             yield full_path, item
           end
         end
+      end
+
+      def _submapping?(item, mapping_class)
+        #; [!qlp3f] returns false if item is like '{GET: ...}'.
+        return false if item.is_a?(Hash) && item.keys.all? {|k| k.is_a?(Symbol) }
+        #; [!1pmtl] returns true only if item class is same as mapping_class.
+        return item.class == mapping_class
       end
 
       def _normalize_method_mapping(dict)
