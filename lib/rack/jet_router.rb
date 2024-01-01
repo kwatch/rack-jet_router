@@ -56,22 +56,17 @@ module Rack
   ##     status, headers, body = router.call(env)
   ##
   ## Example #3:
-  ##     class Map < Hash         # define subclass of Hash
-  ##     end
-  ##     def Map(**kwargs)        # define helper method to create Map object easily
-  ##       return Map.new.update(kwargs)
-  ##     end
   ##     mapping = {
-  ##         "/"                       => Map(GET: home_app),
+  ##         "/"                       => {GET: home_app},  # not {"GET"=>home_app}
   ##         "/api" => {
-  ##             "/books" => {
-  ##                 ""                => Map(GET: book_list_app, POST: book_create_app),
-  ##                 "/:id(.:format)"  => Map(GET: book_show_app, PUT: book_update_app),
-  ##                 "/:book_id/comments/:comment_id" => Map(POST: comment_create_app),
+  ##             "/books" => {            # not {"GET"=>..., "POST"=>...}
+  ##                 ""                => {GET: book_list_app, POST: book_create_app},
+  ##                 "/:id(.:format)"  => {GET: book_show_app, PUT: book_update_app},
+  ##                 "/:book_id/comments/:comment_id" => {POST: comment_create_app},
   ##             },
   ##         },
   ##         "/admin" => {
-  ##             "/books"              => Map(ANY: admin_books_app),
+  ##             "/books"              => {ANY: admin_books_app},  # not {"ANY"=>...}
   ##         },
   ##     }
   ##     router = Rack::JetRouter.new(mapping)
@@ -362,7 +357,7 @@ module Rack
         mapping.each do |sub_path, item|
           full_path = base_path + sub_path
           #; [!2ntnk] nested dict mapping can have subclass of Hash as handlers.
-          if item.class == mapping_class
+          if _submapping?(item, mapping_class)
             #; [!dj0sh] traverses mapping recursively.
             _traverse_mapping(item, full_path, mapping_class, &block)
           else
@@ -372,6 +367,13 @@ module Rack
             yield full_path, item
           end
         end
+      end
+
+      def _submapping?(item, mapping_class)
+        #; [!qlp3f] returns false if item is like '{GET: ...}'.
+        return false if item.is_a?(Hash) && item.keys.all? {|k| k.is_a?(Symbol) }
+        #; [!1pmtl] returns true only if item class is same as mapping_class.
+        return item.class == mapping_class
       end
 
       def _normalize_method_mapping(dict)

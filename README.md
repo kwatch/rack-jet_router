@@ -93,30 +93,29 @@ Benchmark script is [here](https://github.com/kwatch/rack-jet_router/blob/releas
 ### #1: Depends only on Request Path
 
 ```ruby
-# -*- coding: utf-8 -*-
-
 require 'rack'
 require 'rack/jet_router'
 
 ## Assume that welcome_app, books_api, ... are Rack application.
-mapping = [
-    ['/'                       , welcome_app],
-    ['/api', [
-        ['/books', [
-            [''                , books_api],
-            ['/:id(.:format)'  , book_api],
-            ['/:book_id/comments/:comment_id', comment_api],
-        ]],
-    ]],
-    ['/admin', [
-        ['/books'              , admin_books_app],
-    ]],
-]
+mapping = {
+    "/"                       => welcome_app,
+    "/api" => {
+        "/books" => {
+            ""                => books_api,
+            "/:id(.:format)"  => book_api,
+            "/:book_id/comments/:comment_id" => comment_api,
+        },
+    },
+    "/admin" => {
+        "/books"              => admin_books_app,
+    },
+}
 
 router = Rack::JetRouter.new(mapping)
 p router.lookup('/api/books/123.json')
     #=> [book_api, {"id"=>"123", "format"=>"json"}]
 
+env = Rack::MockRequest.env_for("/api/books/123.json", method: 'GET')
 status, headers, body = router.call(env)
 ```
 
@@ -124,30 +123,29 @@ status, headers, body = router.call(env)
 ### #2: Depends on both Request Path and Method
 
 ```ruby
-# -*- coding: utf-8 -*-
-
 require 'rack'
 require 'rack/jet_router'
 
 ## Assume that welcome_app, book_list_api, ... are Rack application.
-mapping = [
-    ['/'                       , {GET: welcome_app}],
-    ['/api', [
-        ['/books', [
-            [''                , {GET: book_list_api, POST: book_create_api}],
-            ['/:id(.:format)'  , {GET: book_show_api, PUT: book_update_api}],
-            ['/:book_id/comments/:comment_id', {POST: comment_create_api}],
-        ]],
-    ]],
-    ['/admin', [
-        ['/books'              , {ANY: admin_books_app}],
-    ]],
-]
+mapping = {
+    "/"                       => {GET: welcome_app},   # not {"GET"=>...}
+    "/api" => {
+        "/books" => {            # not {"GET"=>..., "POST"=>...}
+            ""                => {GET: book_list_api, POST: book_create_api},
+            "/:id(.:format)"  => {GET: book_show_api, PUT: book_update_api},
+            "/:book_id/comments/:comment_id" => {POST: comment_create_api},
+        },
+    },
+    "/admin" => {
+        "/books"              => {ANY: admin_books_app},   # not {"ANY"=>...}
+    },
+}
 
 router = Rack::JetRouter.new(mapping)
 p router.lookup('/api/books/123')
     #=> [{"GET"=>book_show_api, "PUT"=>book_update_api}, {"id"=>"123", "format"=>nil}]
 
+env = Rack::MockRequest.env_for("/api/books/123", method: 'GET')
 status, headers, body = router.call(env)
 ```
 
@@ -158,8 +156,6 @@ automatically when passing to `Rack::JetRouter.new()`.
 ### #3: RESTful Framework
 
 ```ruby
-# -*- coding: utf-8 -*-
-
 require 'rack'
 require 'rack/jet_router'
 
@@ -179,33 +175,33 @@ class BooksAPI < API
   def delete(id: nil); ....; end
 end
 
-mapping = [
-    ['/api', [
-        ['/books', [
-            [''      , {GET:    [BooksAPI, :index],
-                        POST:   [BooksAPI, :create]}],
-            ['/:id'  , {GET:    [BooksAPI, :show],
+mapping = {
+    "/api" => {
+        "/books" => {  # not {"GET"=>..., "POST"=>...}
+            ""      => {GET:    [BooksAPI, :index],
+                        POST:   [BooksAPI, :create]},
+            "/:id"  => {GET:    [BooksAPI, :show],
                         PUT:    [BooksAPI, :update],
-                        DELETE: [BooksAPI, :delete]}],
-        ]],
-    ]],
-]
+                        DELETE: [BooksAPI, :delete]},
+        },
+    },
+}
 router = Rack::JetRouter.new(mapping)
-dict, args = router.lookup('/api/books/123')
+dict, args = router.lookup("/api/books/123")
 p dict   #=> {"GET"=>[BooksAPI, :show], "PUT"=>[...], "DELETE"=>[...]}
 p args   #=> {"id"=>"123"}
-klass, action = dict["GET"]
+klass, method_name = dict["GET"]
 handler = klass.new(Rack::Request.new(env), Rack::Response.new)
-handler.__send__(action, args)
+handler.__send__(method_name, args)
 ```
 
 
 ## Topics
 
 
-### Nested Array v.s. Nested Hash
+### Nested Hash v.s. Nested Array
 
-URL path mapping can be not only nested Array but also nested Hash.
+URL path mapping can be not only nested Hash but also nested Array.
 
 ```ruby
 ## nested Array
@@ -229,11 +225,12 @@ mapping = {
 }
 ```
 
-But nested Hash mapping can't include request method mappings, because
-it is hard to distinguish between URL path mapping and request method mapping.
+When using nested Hash, request method mappings should be ``{GET: ...}``
+instead of ``{"GET"=>...}``, because with the latter it is hard to
+distinguish between URL path mapping and request method mapping.
 
 ```ruby
-## NOT OK
+## OK
 mapping = {
     "/api" => {
         "/books" => {
@@ -242,24 +239,13 @@ mapping = {
         },
     },
 }
-```
 
-In this case, define subclass of Hash class and use it instead of Hash.
-
-```ruby
-class Map < Hash       # define subclass of Hash class
-end
-
-def Map(**kwargs)      # helper method to create subclass object
-  return Map.new.update(kwargs)
-end
-
-## OK
+## Not OK
 mapping = {
     "/api" => {
         "/books" => {
-            ""      => Map(GET: book_list_api, POST: book_create_api),
-            "/:id"  => Map(GET: book_show_api, PUT: book_update_api),
+            ""      => {"GET"=>book_list_api, "POST"=>book_create_api},
+            "/:id"  => {"GET"=>book_show_api, "PUT"=>book_update_api},
         },
     },
 }
@@ -346,9 +332,9 @@ rack_app = proc {|env|
   [200, {}, [text]]
 }
 
-mapping = [
-  ["/api/books/:book_id", rack_app]
-]
+mapping = {
+  "/api/books/:book_id" => rack_app,
+}
 router = Rack::JetRouter.new(mapping, int_param: /(?:\A|_)id\z/
 
 env = Rack::MockRequest.env_for("/api/books/123")
