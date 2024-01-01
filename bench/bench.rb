@@ -296,119 +296,105 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
   end
 
   ### Rack
-  if flag_rack
-    #target_urlpaths.each do |x|
-    #  rack_app.call(newenv(x))               # warm up
-    #  task "(Rack plain app) #{x}" do        # no routing
-    #    env = newenv(x)
-    #    i = 0; n = N
-    #    while (i += 1) <= n
-    #      tuple = rack_app.call(env)
-    #    end
-    #    tuple
-    #  end
-    #end
-    target_urlpaths.each do |x|
-      rack_app.call(newenv(x))               # warm up
-      task "(Rack::Req+Res)  #{x}" do        # no routing
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = rack_app.call(env)
-        end
-        tuple
+  #flag_rack and target_urlpaths.each do |x|
+  #  rack_app.call(newenv(x))               # warm up
+  #  task "(Rack plain app) #{x}" do        # no routing
+  #    env = newenv(x)
+  #    i = 0; n = N
+  #    while (i += 1) <= n
+  #      tuple = rack_app.call(env)
+  #    end
+  #    tuple
+  #  end
+  #end
+  flag_rack and target_urlpaths.each do |x|
+    rack_app.call(newenv(x))               # warm up
+    task "(Rack::Req+Res)  #{x}" do        # no routing
+      env = newenv(x)
+      i = 0; n = N
+      while (i += 1) <= n
+        tuple = rack_app.call(env)
       end
+      tuple
     end
   end
 
   ### Rack::JetRouter
-  if flag_jet
-    target_urlpaths.each do |x|
-      jet_app.call(newenv(x))             # warm up
-      task "(JetRouter)      #{x}" do
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = jet_app.call(env)
-        end
-        tuple
+  flag_jet and target_urlpaths.each do |x|
+    jet_app.call(newenv(x))             # warm up
+    task "(JetRouter)      #{x}" do
+      env = newenv(x)
+      i = 0; n = N
+      while (i += 1) <= n
+        tuple = jet_app.call(env)
       end
+      tuple
     end
   end
 
   ### Keight
-  if flag_keight
-    target_urlpaths.each do |x|
-      keight_app.call(newenv(x))                 # warm up
-      task "(Keight)         #{x}" do
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = keight_app.call(env)
-        end
-        tuple
+  flag_keight and target_urlpaths.each do |x|
+    keight_app.call(newenv(x))                 # warm up
+    task "(Keight)         #{x}" do
+      env = newenv(x)
+      i = 0; n = N
+      while (i += 1) <= n
+        tuple = keight_app.call(env)
       end
+      tuple
     end
   end
 
   ### Hanami::Router
-  if flag_hanami
-    target_urlpaths.each do |x|
-      hanami_app.call(newenv(x))          # warm up
-      task "(Hanami::Router) #{x}" do
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = hanami_app.call(env)
-        end
-        tuple
+  flag_hanami and target_urlpaths.each do |x|
+    hanami_app.call(newenv(x))          # warm up
+    task "(Hanami::Router) #{x}" do
+      env = newenv(x)
+      i = 0; n = N
+      while (i += 1) <= n
+        tuple = hanami_app.call(env)
       end
+      tuple
     end
   end
 
   ### HttpRouter
-  if flag_httprouter
-    target_urlpaths.each do |path|
-      httprouter_app.call(newenv(path))          # warm up
-      task "(HttpRouter)     #{path}" do
-        env = newenv(path)
-        i = 0; n = N
-        while (i += 1) <= n
-          result = httprouter_app.call(env)
-          #result = httprouter_app.route(path)
-        end
-        result
+  flag_httprouter and target_urlpaths.each do |path|
+    httprouter_app.call(newenv(path))          # warm up
+    task "(HttpRouter)     #{path}" do
+      env = newenv(path)
+      i = 0; n = N
+      while (i += 1) <= n
+        result = httprouter_app.call(env)
+        #result = httprouter_app.route(path)
       end
+      result
     end
   end
 
   ### Rack::Multiplexer
-  if flag_multiplexer
-    target_urlpaths.each do |x|
-      multiplexer_app.call(newenv(x))                # warm up
-      task "(Multiplexer)    #{x}" do
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = multiplexer_app.call(env)
-        end
-        tuple
+  flag_multiplexer and target_urlpaths.each do |x|
+    multiplexer_app.call(newenv(x))                # warm up
+    task "(Multiplexer)    #{x}" do
+      env = newenv(x)
+      i = 0; n = N
+      while (i += 1) <= n
+        tuple = multiplexer_app.call(env)
       end
+      tuple
     end
   end
 
   ### Sinatra
-  if flag_sinatra
-    target_urlpaths.each do |x|
-      sinatra_app.call(newenv(x))               # warm up
-      task "(Sinatra)        #{x}" do
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = sinatra_app.call(env)
-        end
-        tuple
+  flag_sinatra and target_urlpaths.each do |x|
+    sinatra_app.call(newenv(x))               # warm up
+    task "(Sinatra)        #{x}" do
+      env = newenv(x)
+      i = 0; n = N
+      while (i += 1) <= n
+        tuple = sinatra_app.call(env)
       end
+      tuple
     end
   end
 
