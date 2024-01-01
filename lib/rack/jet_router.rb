@@ -136,7 +136,7 @@ module Rack
       #
       #; [!x2l32] gathers all endpoints.
       builder = Builder.new(self, _enable_range)
-      param_rexp = /:\w+|\(.*?\)/
+      param_rexp = /[:*]\w+|\(.*?\)/
       tmplist = []
       builder.traverse_mapping(mapping) do |path, item|
         @all_endpoints << [path, item]
@@ -145,7 +145,7 @@ module Rack
           @fixed_endpoints[path] = item
         #; [!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths.
         #; [!ylyi0] stores '/foo' as fixed path when path pattern is '/foo(.:format)'.
-        elsif path =~ /\A([^:\(\)]*)\(([^\(\)]+)\)\z/
+        elsif path =~ /\A([^:*\(\)]*)\(([^\(\)]+)\)\z/
           @fixed_endpoints[$1] = item unless $1.empty?
           arr = []
           $2.split('|').each do |s|
@@ -383,38 +383,17 @@ module Rack
       def build_tree(entrypoint_pairs)
         #; [!6oa05] builds nested hash object from mapping data.
         tree = {}         # tree is a nested dict
-        param_d = {}
+        pnames_d = {}
         entrypoint_pairs.each do |path, item|
           d = tree
           sb = ['\A']
-          pos = 0
-          params = []
-          #; [!uyupj] handles urlpath parameter such as ':id'.
-          #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
-          path.scan(/:(\w+)|\((.*?)\)/) do
-            param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
-            m = Regexp.last_match()
-            str = path[pos, m.begin(0) - pos]
-            pos = m.end(0)
-            #; [!akkkx] converts urlpath param into regexp.
-            #; [!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'.
-            pat1, pat2 = _param_patterns(param, optional) do |param_|
-              param_.freeze
-              params << (param_d[param_] ||= param_)
-            end
+          pnames = _parse_path(path, sb, pnames_d) do |str, pat1|
             #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
             d = _next_dict(d, str) unless str.empty?
-            d = (d[pat1.intern] ||= {})       # ex: pat1=='[^./?]+'
-            #; [!zoym3] urlpath string should be escaped.
-            sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
-          end
-          #; [!o642c] remained string after param should be handled correctly.
-          str = pos == 0 ? path : path[pos..-1]
-          unless str.empty?
-            d = _next_dict(d, str)
-            sb << Regexp.escape(str)          # ex: str=='.html'
+            d = (d[pat1.intern] ||= {}) if pat1      # ex: pat1=='[^./?]+'
           end
           sb << '\z'
+          rexp = Regexp.compile(sb.join())
           #; [!kz8m7] range object should be included into tuple if only one param exist.
           if @enable_range
             range, separator = _range_of_urlpath_param(path)
@@ -422,12 +401,47 @@ module Rack
             range = separator = nil
           end
           #; [!c6xmp] tuple should be stored into nested dict with key 'nil'.
-          d[nil] = [Regexp.compile(sb.join()), params, item, range, separator]
+          d[nil] = [rexp, pnames, item, range, separator]
         end
         return tree
       end
 
       private
+
+      def _parse_path(path, sb, pnames_d, &b)
+        pos = 0
+        pnames = []
+        #; [!uyupj] handles urlpath parameter such as ':id'.
+        #; [!k7oxt] handles urlpath parameter such as ':filepath'.
+        #; [!j9cdy] handles optional urlpath parameter such as '(.:format)'.
+        path.scan(/([:*]\w+)|\((.*?)\)/) do
+          param = $1; optional = $2         # ex: $1=='id' or $2=='.:format'
+          m = Regexp.last_match()
+          str = path[pos, m.begin(0) - pos]
+          pos = m.end(0)
+          #; [!akkkx] converts urlpath param into regexp.
+          #; [!lwgt6] handles '|' (OR) pattern in '()' such as '(.html|.json)'.
+          pat1, pat2 = _param_patterns(param, optional) do |pname|
+            pname.freeze
+            pnames << (pnames_d[pname] ||= pname)
+          end
+          yield str, pat1
+          #; [!zoym3] urlpath string should be escaped.
+          sb << Regexp.escape(str) << pat2  # ex: pat2=='([^./?]+)'
+          #; [!2axyy] raises error if '*path' param is not at end of path.
+          if param =~ /\A\*/
+            pos == path.length  or
+              raise ArgumentError.new("#{path}: Invalid path parameter ('#{param}' should be at end of the path).")
+          end
+        end
+        #; [!o642c] remained string after param should be handled correctly.
+        str = pos == 0 ? path : path[pos..-1]
+        unless str.empty?
+          yield str, nil
+          sb << Regexp.escape(str)          # ex: str=='.html'
+        end
+        return pnames
+      end
 
       def _next_dict(d, str)
         #; [!s1rzs] if new key exists in dict...
@@ -496,10 +510,13 @@ module Rack
 
       def _param_patterns(param, optional, &callback)
         #; [!j90mw] returns '[^./?]+' and '([^./?]+)' if param specified.
+        #; [!jbvyb] returns '.*' and '(.*)' if param is like '*filepath'.
         if param
           optional == nil  or raise "** internal error"
-          yield param
-          pat1 = _param2rexp(param)     # ex: '[^./?]+'
+          param =~ /\A([:*])(\w+)\z/  or raise "** internal error"
+          pname = $2
+          yield pname
+          pat1 = $1 == '*' ? '.*' : _param2rexp(pname)  # ex: '[^./?]+'
           pat2 = "(#{pat1})"
         #; [!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'.
         elsif optional == ".:format"
@@ -512,10 +529,10 @@ module Rack
           #; [!oh9c6] optional string can have '|' (OR).
           optional.split('|').each_with_index do |string, i|
             sb << '|' if i > 0
-            string.scan(/(.*?)(?::(\w+))/) do |str, param_|
-              pat = _param2rexp(param)                  # ex: pat == '[^./?]+'
+            string.scan(/(.*?)(?::(\w+))/) do |str, pname|
+              pat = _param2rexp(pname)                  # ex: pat == '[^./?]+'
               sb << Regexp.escape(str) << "<<#{pat}>>"  # ex: sb << '(?:\.<<[^./?]+>>)?'
-              yield param_
+              yield pname
             end
             sb << Regexp.escape($' || string)
           end
@@ -570,7 +587,7 @@ module Rack
         #; [!elsdx] returns Range and separator string when urlpath_pattern contains two params.
         #; [!skh4z] returns nil when urlpath_pattern contains more than two params.
         #; [!acj5b] returns nil when urlpath_pattern contains no params.
-        rexp = /:\w+/
+        rexp = /[:*]\w+/
         arr = urlpath_pattern.split(rexp, -1)   # ex: ['/books/', '/comments/', '.json']
         case arr.length
         when 2                                  # ex: arr == ['/books/', '.json']

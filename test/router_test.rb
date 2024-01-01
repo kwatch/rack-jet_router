@@ -35,6 +35,8 @@ Oktest.scope do
     admin_book_delete_app  = proc {|env| [200, {}, ["admin_book_delete_app"]]}
     admin_book_edit_app    = proc {|env| [200, {}, ["admin_book_edit_app"]]}
     #
+    staticfile_app   = proc {|env| [200, {}, ["staticfile_app"]]}
+    #
     whole_urlpath_mapping = [
       ['/'              , welcome_app],
       ['/index.html'    , welcome_app],
@@ -56,6 +58,7 @@ Oktest.scope do
           ['/:id'       , {:GET=>admin_book_show_app, :PUT=>admin_book_update_app, :DELETE=>admin_book_delete_app}],
         ]],
       ]],
+      ['/static/*filepath', {:GET=>staticfile_app}],
     ]
 
     def new_env(req_method, req_path, opts={})
@@ -250,6 +253,9 @@ Oktest.scope do
              "PUT"    => admin_book_update_app,
              "DELETE" => admin_book_delete_app,
            }],
+          ["/static/*filepath", {
+             "GET"    => staticfile_app,
+           }],
         ]
       end
 
@@ -314,7 +320,8 @@ Oktest.scope do
       spec "[!saa1a] compiles compound urlpath regexp." do
         id = '[^./?]+'
         z  = '(\z)'
-        ok {@router.urlpath_rexp} == %r!\A/a(?:pi/books/#{id}(?:#{z}|/(?:edit#{z}|comments(?:#{z}|/#{id}#{z})))|dmin/books/#{id}#{z})\z!
+        expected = %r!\A/(?:a(?:pi/books/#{id}(?:#{z}|/(?:edit#{z}|comments(?:#{z}|/#{id}#{z})))|dmin/books/#{id}#{z})|static/.*(\z))\z!
+        ok {@router.urlpath_rexp} == expected
       end
 
       spec "[!f1d7s] builds variable endpoint list." do
@@ -331,6 +338,7 @@ Oktest.scope do
             [%r'\A/api/books/(#{id})/comments\z',         ['book_id'], comment_create_api, (11..-10), nil],
             [%r'\A/api/books/(#{id})/comments/(#{id})\z', ['book_id', 'comment_id'], comment_update_api, (11..-1), '/comments/'],
             [%r'\A/admin/books/(#{id})\z', ['id'], map2, (13..-1), nil],
+            [%r'\A/static/(.*)\z', ['filepath'], {"GET"=>staticfile_app}, (8..-1), nil],
           ]
         end
       end

@@ -25,6 +25,8 @@ Oktest.scope do
     comment_create_api     = proc {|env| [200, {}, ["comment_create_api"]]}
     comment_update_api     = proc {|env| [200, {}, ["comment_update_api"]]}
     #
+    staticfile_api   = proc {|env| [200, {}, ["staticfile_api"]]}
+    #
 
     def _find(d, k)
       return d.key?(k) ? d[k] : _find(d.to_a[0][1], k)
@@ -98,6 +100,20 @@ Oktest.scope do
         }
       end
 
+      spec "[!k7oxt] handles urlpath parameter such as ':filepath'." do
+        endpoint_pairs = [
+          ["/static/*filepath"    , {"GET"=>staticfile_api}],
+        ]
+        dict = @builder.build_tree(endpoint_pairs)
+        ok {dict} == {
+          "/static/" => {
+            :".*" => {
+              nil => [/\A\/static\/(.*)\z/, ["filepath"], {"GET"=>staticfile_api}, (8..-1), nil],
+            },
+          },
+        }
+      end
+
       spec "[!j9cdy] handles optional urlpath parameter such as '(.:format)'." do
         endpoint_pairs = [
           ["/api/books(.:format)"    , {"GET"=>book_list_api}],
@@ -158,6 +174,15 @@ Oktest.scope do
         tuple = _find(dict, nil)
         id = '[^./?]+'
         ok {tuple[0]} == %r`\A/api/books\.dir\.tmp/(#{id})\.tar\.gz\z`
+      end
+
+      spec "[!2axyy] raises error if '*path' param is not at end of path." do
+        endpoint_pairs = [
+          ["/static/*filepath.css", staticfile_api],
+        ]
+        pr = proc { @builder.build_tree(endpoint_pairs) }
+        ok {pr}.raise?(ArgumentError,
+                       "/static/*filepath.css: Invalid path parameter ('*filepath' should be at end of the path).")
       end
 
       spec "[!o642c] remained string after param should be handled correctly." do
@@ -487,10 +512,18 @@ Oktest.scope do
 
       spec "[!j90mw] returns '[^./?]+' and '([^./?]+)' if param specified." do
         x = nil
-        s1, s2 = @builder.instance_eval { _param_patterns("id", nil) {|a| x = a } }
+        s1, s2 = @builder.instance_eval { _param_patterns(":id", nil) {|a| x = a } }
         ok {s1} == '[^./?]+'
         ok {s2} == '([^./?]+)'
         ok {x} == "id"
+      end
+
+      spec "[!jbvyb] returns '.*' and '(.*)' if param is like '*filepath'." do
+        x = nil
+        s1, s2 = @builder.instance_eval { _param_patterns("*filepath", nil) {|a| x = a } }
+        ok {s1} == '.*'
+        ok {s2} == '(.*)'
+        ok {x} == "filepath"
       end
 
       spec "[!raic7] returns '(?:\.[^./?]+)?' and '(?:\.([^./?]+))?' if optional param is '(.:format)'." do
