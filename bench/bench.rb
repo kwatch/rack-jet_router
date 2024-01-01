@@ -321,7 +321,7 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
 
   ### Rack::JetRouter
   flag_jet and target_urlpaths.each do |x|
-    jet_app.call(newenv(x))             # warm up
+    jet_app.call(newenv(x))                # warm up
     task "(JetRouter)      #{x}" do
       env = newenv(x)
       i = 0; n = N
@@ -334,7 +334,7 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
 
   ### Keight
   flag_keight and target_urlpaths.each do |x|
-    keight_app.call(newenv(x))                 # warm up
+    keight_app.call(newenv(x))             # warm up
     task "(Keight)         #{x}" do
       env = newenv(x)
       i = 0; n = N
@@ -347,7 +347,7 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
 
   ### Hanami::Router
   flag_hanami and target_urlpaths.each do |x|
-    hanami_app.call(newenv(x))          # warm up
+    hanami_app.call(newenv(x))             # warm up
     task "(Hanami::Router) #{x}" do
       env = newenv(x)
       i = 0; n = N
@@ -360,7 +360,7 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
 
   ### HttpRouter
   flag_httprouter and target_urlpaths.each do |path|
-    httprouter_app.call(newenv(path))          # warm up
+    httprouter_app.call(newenv(path))      # warm up
     task "(HttpRouter)     #{path}" do
       env = newenv(path)
       i = 0; n = N
@@ -374,7 +374,7 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
 
   ### Rack::Multiplexer
   flag_multiplexer and target_urlpaths.each do |x|
-    multiplexer_app.call(newenv(x))                # warm up
+    multiplexer_app.call(newenv(x))        # warm up
     task "(Multiplexer)    #{x}" do
       env = newenv(x)
       i = 0; n = N
@@ -387,7 +387,7 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
 
   ### Sinatra
   flag_sinatra and target_urlpaths.each do |x|
-    sinatra_app.call(newenv(x))               # warm up
+    sinatra_app.call(newenv(x))            # warm up
     task "(Sinatra)        #{x}" do
       env = newenv(x)
       i = 0; n = N
