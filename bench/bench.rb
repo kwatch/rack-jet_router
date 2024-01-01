@@ -94,33 +94,21 @@ target_urlpaths = [
 ]
 
 
-def generate_apps_strkey(env_key)
+def generate_apps(env_key, key_class)
+  if    key_class == String ; id, c_id = 'id', 'c_id'
+  elsif key_class == Symbol ; id, c_id = :id, :c_id
+  else                      ; raise "** internal error: key_class=#{key_class.inspect}"
+  end
   index_app = proc {|env|
     [200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
   }
   show_app = proc {|env|
     d = env[env_key]
-    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d['id']}</h1>"]]
+    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d[id]}</h1>"]]
   }
   comment_app = proc {|env|
     d = env[env_key]
-    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d['id']}, c_id=#{d['c_id']}</h1>"]]
-  }
-  return index_app, show_app, comment_app
-end
-
-
-def generate_apps_symkey(env_key)
-  index_app = proc {|env|
-    [200, {"Content-Type"=>"text/html"}, ["<h1>hello</h1>"]]
-  }
-  show_app = proc {|env|
-    d = env[env_key]
-    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d[:id]}</h1>"]]
-  }
-  comment_app = proc {|env|
-    d = env[env_key]
-    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d[:id]}, c_id=#{d[:c_id]}</h1>"]]
+    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d[id]}, c_id=#{d[c_id]}</h1>"]]
   }
   return index_app, show_app, comment_app
 end
@@ -149,7 +137,7 @@ rack_app = flag_rack && let() {
 
 
 jet_app = flag_jet && let() {
-  index_app, show_app, comment_app = generate_apps_strkey('rack.urlpath_params')
+  index_app, show_app, comment_app = generate_apps('rack.urlpath_params', String)
   mapping = {
     '/api' => ENTRIES.each_with_object({}) {|x, map|
                 map.update({
@@ -173,7 +161,7 @@ jet_app = flag_jet && let() {
 
 
 multiplexer_app = flag_multiplexer && let() {
-  index_app, show_app, comment_app = generate_apps_strkey('rack.request.query_hash')
+  index_app, show_app, comment_app = generate_apps('rack.request.query_hash', String)
   Rack::Multiplexer.new().tap do |app|
     ENTRIES.each do |x|
       app.get "/api/#{x}"     , index_app
@@ -241,7 +229,7 @@ keight_app = flag_keight && let() {
 
 hanami_app = flag_hanami && let() {
   ## ref: https://github.com/hanami/router
-  index_app, show_app, comment_app = generate_apps_symkey('router.params')
+  index_app, show_app, comment_app = generate_apps('router.params', Symbol)
   Hanami::Router.new do
     scope "api" do
       ENTRIES.each do |x|
@@ -264,7 +252,7 @@ httprouter_app = flag_httprouter && let() {
     end
   end
   #
-  index_app, show_app, comment_app = generate_apps_symkey('router.params')
+  index_app, show_app, comment_app = generate_apps('router.params', Symbol)
   HttpRouter.new.tap do |r|
     ENTRIES.each do |x|
       r.add("/api/#{x}"    ).to(index_app)
