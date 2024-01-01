@@ -56,22 +56,17 @@ module Rack
   ##     status, headers, body = router.call(env)
   ##
   ## Example #3:
-  ##     class Map < Hash         # define subclass of Hash
-  ##     end
-  ##     def Map(**kwargs)        # define helper method to create Map object easily
-  ##       return Map.new.update(kwargs)
-  ##     end
   ##     mapping = {
-  ##         "/"                       => Map(GET: home_app),
+  ##         "/"                       => {GET: home_app},  # not {"GET"=>home_app}
   ##         "/api" => {
-  ##             "/books" => {
-  ##                 ""                => Map(GET: book_list_app, POST: book_create_app),
-  ##                 "/:id(.:format)"  => Map(GET: book_show_app, PUT: book_update_app),
-  ##                 "/:book_id/comments/:comment_id" => Map(POST: comment_create_app),
+  ##             "/books" => {            # not {"GET"=>..., "POST"=>...}
+  ##                 ""                => {GET: book_list_app, POST: book_create_app},
+  ##                 "/:id(.:format)"  => {GET: book_show_app, PUT: book_update_app},
+  ##                 "/:book_id/comments/:comment_id" => {POST: comment_create_app},
   ##             },
   ##         },
   ##         "/admin" => {
-  ##             "/books"              => Map(ANY: admin_books_app),
+  ##             "/books"              => {ANY: admin_books_app},  # not {"ANY"=>...}
   ##         },
   ##     }
   ##     router = Rack::JetRouter.new(mapping)
