@@ -64,22 +64,22 @@ get_flag = GetFlag.new(
   :rack        => true,
   :jet         => true,
  #:rocket      => true,
-  :multiplexer => true,
-  :sinatra     => true,
   :keight      => true,
   :hanami      => true,
   :httprouter  => true,
+  :multiplexer => true,
+  :sinatra     => true,
 )
 
 
 flag_rack        = get_flag.(:rack       , "rack"            ) { Rack.release }
 #flag_rocket     = get_flag.(:rocket     , "rocketrouter"    ) { RocketRouter::VERSION }
 flag_jet         = get_flag.(:jet        , "rack/jet_router" ) { Rack::JetRouter::RELEASE }
-flag_multiplexer = get_flag.(:multiplexer, "rack/multiplexer") { Rack::Multiplexer::VERSION }
-flag_sinatra     = get_flag.(:sinatra    , "sinatra/base"    ) { Sinatra::VERSION }
 flag_keight      = get_flag.(:keight     , "keight"          ) { K8::RELEASE }
 flag_hanami      = get_flag.(:hanami     , "hanami/router"   ) { Hanami::Router::VERSION }
 flag_httprouter  = get_flag.(:httprouter , "http_router"     ) { require "http_router/version"; HttpRouter::VERSION }
+flag_multiplexer = get_flag.(:multiplexer, "rack/multiplexer") { Rack::Multiplexer::VERSION }
+flag_sinatra     = get_flag.(:sinatra    , "sinatra/base"    ) { Sinatra::VERSION }
 
 
 ENTRIES = ('a'..'z').map.with_index {|x, i| "%s%02d" % [x*3, i+1] }
@@ -336,36 +336,6 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
     end
   end
 
-  ### Rack::Multiplexer
-  if flag_multiplexer
-    target_urlpaths.each do |x|
-      multiplexer_app.call(newenv(x))                # warm up
-      task "(Multiplexer)    #{x}" do
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = multiplexer_app.call(env)
-        end
-        tuple
-      end
-    end
-  end
-
-  ### Sinatra
-  if flag_sinatra
-    target_urlpaths.each do |x|
-      sinatra_app.call(newenv(x))               # warm up
-      task "(Sinatra)        #{x}" do
-        env = newenv(x)
-        i = 0; n = N
-        while (i += 1) <= n
-          tuple = sinatra_app.call(env)
-        end
-        tuple
-      end
-    end
-  end
-
   ### Keight
   if flag_keight
     target_urlpaths.each do |x|
@@ -408,6 +378,36 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
           #result = httprouter_app.route(path)
         end
         result
+      end
+    end
+  end
+
+  ### Rack::Multiplexer
+  if flag_multiplexer
+    target_urlpaths.each do |x|
+      multiplexer_app.call(newenv(x))                # warm up
+      task "(Multiplexer)    #{x}" do
+        env = newenv(x)
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = multiplexer_app.call(env)
+        end
+        tuple
+      end
+    end
+  end
+
+  ### Sinatra
+  if flag_sinatra
+    target_urlpaths.each do |x|
+      sinatra_app.call(newenv(x))               # warm up
+      task "(Sinatra)        #{x}" do
+        env = newenv(x)
+        i = 0; n = N
+        while (i += 1) <= n
+          tuple = sinatra_app.call(env)
+        end
+        tuple
       end
     end
   end
