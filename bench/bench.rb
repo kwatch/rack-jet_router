@@ -401,14 +401,16 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
   ## validation
   validate do |val|   # or: validate do |val, task_name, tag|
     tuple = val
-    assert tuple[0] == 200, "200 expected but got #{tuple[0]}"
+    assert tuple[0] == 200, "Expected 200 but got #{tuple[0]}"
     body = tuple[2].each {|x| break x }
-    assert body == "<h1>hello</h1>" || \
-           body == "<h1>id=123</h1>" || \
-           body == "<h1>id=456</h1>" || \
-           body == "<h1>id=123, comment_id=7</h1>" || \
-           body == "<h1>id=456, comment_id=7</h1>", \
-           "#{body.inspect}: unpexpected body"
+    expected_bodies = [
+      "<h1>hello</h1>",
+      "<h1>id=123</h1>",
+      "<h1>id=456</h1>",
+      "<h1>id=123, comment_id=7</h1>",
+      "<h1>id=456, comment_id=7</h1>",
+    ]
+    assert expected_bodies.include?(body), "#{body.inspect}: Unpexpected body."
   end
 
 end
