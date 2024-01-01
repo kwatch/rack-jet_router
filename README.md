@@ -302,6 +302,32 @@ end
 ```
 
 
+### File Path Type Parameters
+
+If path parameter is ``*foo`` instead of ``:foo``, that parameter matches to any path.
+
+```ruby
+## Assume that book_api and staticfile_app are Rack application.
+mapping = {
+    "/api" => {
+        "/books" => {
+            "/:id"  => book_api,
+        },
+    },
+    "/static/*filepath" => staticfile_app,   # !!!
+}
+
+router = Rack::JetRouter.new(mapping)
+app, args = router.lookup("/static/images/logo.png") # !!!
+p app    #=> staticfile_app
+p args   #=> {"filepath"=>"images/logo.png"}
+```
+
+``*foo`` should be at end of the URL path.
+For example, ``/static/*filepath`` is OK, while ``"/static/*filepath.html"``
+or ``"/static/(*filepath)"`` raises error.
+
+
 ### Integer Type Parameters
 
 Keyword argument ``int_param:`` of ``JetRouter.new()`` specifies
