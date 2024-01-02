@@ -2,7 +2,7 @@ CHANGES
 =======
 
 
-Release 1.4.0 (????-??-??)
+Release 1.4.0 (2024-01-02)
 --------------------------
 
 * [enhance] Supports '*file' style path parameter.
