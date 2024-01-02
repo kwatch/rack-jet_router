@@ -162,6 +162,7 @@ module Rack
         #; [!f1d7s] builds variable endpoint list.
         @variable_endpoints << tuple
       end
+      @subrouter = SubRouter.new(@urlpath_rexp, @variable_endpoints)
     end
 
     attr_reader :urlpath_rexp
@@ -221,22 +222,11 @@ module Rack
         return pair
       end
       #; [!vpdzn] returns nil when urlpath not found.
-      m = @urlpath_rexp.match(req_path)
-      return nil unless m
-      index = m.captures.index('')
-      return nil unless index
+      trio = _find(req_path)
+      return nil unless trio
       #; [!ijqws] returns mapped object and urlpath parameter values when urlpath found.
-      full_urlpath_rexp, param_names, obj, range, sep = @variable_endpoints[index]
-      if range
-        ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
-        str = req_path[range]
-        ## `"/a/1/b/2"[3..-1].split('/b/')` is faster than `%r!\A/a/(\d+)/b/(\d+)\z!.match("/a/1/b/2").captures`
-        values = sep ? str.split(sep) : [str]
-      else
-        m = full_urlpath_rexp.match(req_path)
-        values = m.captures
-      end
-      param_values = build_param_values(param_names, values)
+      obj, params, values = trio
+      param_values = build_param_values(params, values)
       #; [!84inr] caches result when variable urlpath cache enabled.
       if cache
         cache.shift() if cache.length >= @cache_size
@@ -246,6 +236,10 @@ module Rack
     end
 
     alias find lookup      # :nodoc:      # for backward compatilibity
+
+    def _find(req_path)
+      return @subrouter.find(req_path)
+    end
 
     ## Yields pair of urlpath pattern and app.
     def each(&block)
@@ -335,6 +329,38 @@ module Rack
       #; [!6sd9b] returns regexp string according to param name.
       #; [!rfvk2] returns '\d+' if param name matched to int param regexp.
       return (rexp = @int_param) && rexp.match?(param) ? '\d+' : '[^./?]+'
+    end
+
+
+    class SubRouter
+
+      def initialize(compound_path_rexp, tuples)
+        @compound_path_rexp = compound_path_rexp
+        @tuples = tuples
+      end
+
+      attr_reader :compound_path_rexp, :tuples
+
+      def find(req_path)
+        #; [!gapom] returns nil if request path not found.
+        m = @compound_path_rexp.match(req_path)
+        return nil unless m
+        #; [!5quao] returns item, param names and param values if request path found.
+        index = m.captures.index('')  or raise "** internal error: req_path=#{req_path.inspect}"
+        tuple = @tuples[index]  or raise "** internal error: index=#{index.inspect}"
+        path_rexp, params, item, range, sep = tuple
+        if range
+          ## "/books/123"[7..-1] is faster than /\A\/books\/(\d+)\z/.match("/books/123")[1]
+          str = req_path[range]
+          ## `"/a/1/b/2"[3..-1].split('/b/')` is faster than `%r!\A/a/(\d+)/b/(\d+)\z!.match("/a/1/b/2").captures`
+          values = sep ? str.split(sep) : [str]
+        else
+          m = path_rexp.match(req_path)
+          values = m.captures
+        end
+        return item, params, values
+      end
+
     end
 
 

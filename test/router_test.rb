@@ -636,4 +636,36 @@ Oktest.scope do
   end
 
 
+  topic Rack::JetRouter::SubRouter do
+
+    before do
+      path_rexp = %r!\A/api/(?:books/\d+(\z)|orders/\d+(\z))\z!
+      tuples = [
+        [%r!\A/api/books/(\d+)\z! , ["id"], {"GET"=>"book_api"}, nil],
+        [%r!\A/api/orders/(\d+)\z!, ["id"], {"GET"=>"order_api"}, nil],
+      ]
+      @subrouter = Rack::JetRouter::SubRouter.new(path_rexp, tuples)
+    end
+
+
+    topic '#find()' do
+
+      spec "[!gapom] returns nil if request path not found." do
+        ret = @subrouter.find("/api/stores/123")
+        ok {ret} == nil
+      end
+
+      spec "[!5quao] returns item, param names and param values if request path found." do
+        ret = @subrouter.find("/api/books/123")
+        ok {ret} == [{"GET"=>"book_api"}, ["id"], ["123"]]
+        ret = @subrouter.find("/api/orders/456")
+        ok {ret} == [{"GET"=>"order_api"}, ["id"], ["456"]]
+      end
+
+    end
+
+
+  end
+
+
 end
