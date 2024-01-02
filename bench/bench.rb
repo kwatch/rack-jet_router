@@ -36,7 +36,7 @@ class GetFlag
     flag = arr.find {|x| x != nil }
     #
     begin
-      [lib].flatten.each do |x| require x end
+      require lib
     rescue LoadError
       flag = nil
     end
