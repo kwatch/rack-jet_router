@@ -10,6 +10,6 @@ require 'rack/jet_router'
 class Map < Hash
 end
 
-def Map(**kwargs)
-  return Map.new.update(kwargs)
+def Map(dict={}, **kwargs)
+  return Map.new.update(dict.merge(kwargs))
 end
