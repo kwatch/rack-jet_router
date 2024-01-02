@@ -51,7 +51,7 @@ Oktest.scope do
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
-            :'[^./?]+' => {
+            /[^.\/?]+/ => {
               nil => [/\A\/api\/books\/(#{id})\z/,
                       ["id"], book_show_api, 11..-1, nil],
               "/" => {
@@ -63,7 +63,7 @@ Oktest.scope do
                   nil => [/\A\/api\/books\/(#{id})\/comments\z/,
                           ["book_id"], comment_create_api, 11..-10, nil],
                   "/" => {
-                    :'[^./?]+' => {
+                    /[^.\/?]+/ => {
                       nil => [/\A\/api\/books\/(#{id})\/comments\/(#{id})\z/,
                               ["book_id", "comment_id"], comment_update_api, (11..-1), '/comments/'],
                     },
@@ -84,12 +84,12 @@ Oktest.scope do
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
-            :"[^./?]+" => {
+            /[^.\/?]+/ => {
               "/comments" => {
                 nil => [%r`\A/api/books/(#{id})/comments\z`,
                         ["book_id"], {"POST"=>comment_create_api}, (11..-10), nil],
                 "/" => {
-                  :"[^./?]+" => {
+                  /[^.\/?]+/ => {
                     nil => [%r`\A/api/books/(#{id})/comments/(#{id})\z`,
                             ["book_id", "id"], {"PUT"=>comment_update_api}, (11..-1), '/comments/'],
                   },
@@ -107,7 +107,7 @@ Oktest.scope do
         dict = @builder.build_tree(endpoint_pairs)
         ok {dict} == {
           "/static/" => {
-            :".*" => {
+            /.*/ => {
               nil => [/\A\/static\/(.*)\z/, ["filepath"], {"GET"=>staticfile_api}, (8..-1), nil],
             },
           },
@@ -123,12 +123,12 @@ Oktest.scope do
         id = '[^./?]+'
         ok {dict} == {
           "/api/books" => {
-            :"(?:\\.[^./?]+)?" => {
+            /(?:\.[^.\/?]+)?/ => {
               nil => [%r`\A/api/books(?:\.(#{id}))?\z`,
                       ["format"], {"GET"=>book_list_api}, nil, nil]},
             "/" => {
-              :"[^./?]+" => {
-                :"(?:\\.[^./?]+)?" => {
+              /[^.\/?]+/ => {
+                /(?:\.[^.\/?]+)?/ => {
                   nil => [%r`\A/api/books/(#{id})(?:\.(#{id}))?\z`,
                           ["id", "format"], {"GET"=>book_show_api}, nil, nil],
                 },
@@ -158,12 +158,12 @@ Oktest.scope do
         ok {tuple[0]} == %r`\A/api/books/(#{id})(?:\.html|\.json)?\z`
       end
 
-      spec "[!po6o6] param regexp should be stored into nested dict as a Symbol." do
+      spec "[!po6o6] param regexp should be stored into nested dict as a Regexp." do
         endpoint_pairs = [
           ["/api/books/:id", book_show_api],
         ]
         dict = @builder.build_tree(endpoint_pairs)
-        ok {dict["/api/books/"].keys()} == [:'[^./?]+']
+        ok {dict["/api/books/"].keys()} == [/[^.\/?]+/]
       end
 
       spec "[!zoym3] urlpath string should be escaped." do
@@ -214,7 +214,7 @@ Oktest.scope do
         id = '[^./?]+'
         ok {dict} == {
           "/api/books/" => {
-            :"[^./?]+" => {
+            /[^.\/?]+/ => {
               ".json" => {
                 nil => [%r`\A/api/books/(#{id})\.json\z`,
                         ["id"], book_show_api, (11..-6), nil],
@@ -416,13 +416,13 @@ Oktest.scope do
         ok {dict.keys} == ["aa1", "bb", "cc1"]
       end
 
-      spec "[!4wdi7] ignores Symbol key (which represents regexp)." do
-        dict = {"aa1" => {"aa2"=>10}, :"bb1" => {"bb2"=>20}}
+      spec "[!4wdi7] ignores non-string key (which represents regexp)." do
+        dict = {"aa1" => {"aa2"=>10}, /bb1/ => {"bb2"=>20}}
         d2 = @builder.instance_eval { _next_dict(dict, "bb1") }
         ok {d2} == {}
         ok {dict} == {
           "aa1" => {"aa2"=>10},
-          :"bb1" => {"bb2"=>20},
+          /bb1/ => {"bb2"=>20},
           "bb1" => {},
         }
         ok {dict["bb1"]}.same?(d2)
@@ -581,12 +581,12 @@ Oktest.scope do
       spec "[!65yw6] converts nested dict into regexp." do
         dict = {
           "/api/books/" => {
-            :"[^./?]+" => {
+            /[^.\/?]+/ => {
               nil => [],
               "/comments" => {
                 nil => [],
                 "/" => {
-                  :"[^./?]+" => {
+                  /[^.\/?]+/ => {
                     nil => [],
                   },
                 },
@@ -602,10 +602,10 @@ Oktest.scope do
       spec "[!hs7vl] '(?:)' and '|' are added only if necessary." do
         dict = {
           "/api/books/" => {
-            :"[^./?]+" => {
+            /[^.\/?]+/ => {
               "/comments" => {
                 "/" => {
-                  :"[^./?]+" => {
+                  /[^.\/?]+/ => {
                     nil => [],
                   },
                 },
@@ -621,11 +621,11 @@ Oktest.scope do
       spec "[!7v7yo] nil key means leaf node and yields block argument." do
         dict = {
           "/api/books/" => {
-            :"[^./?]+" => {
+            /[^.\/?]+/ => {
               nil => [9820],
               "/comments" => {
                 "/" => {
-                  :"[^./?]+" => {
+                  /[^.\/?]+/ => {
                     nil => [1549],
                   },
                 },
@@ -643,7 +643,7 @@ Oktest.scope do
       spec "[!hda6m] string key should be escaped." do
         dict = {
           "/api/books/" => {
-            :"[^./?]+" => {
+            /[^.\/?]+/ => {
               ".json" => {
                 nil => [],
               }
@@ -658,7 +658,7 @@ Oktest.scope do
       spec "[!b9hxc] symbol key means regexp string." do
         dict = {
           "/api/books/" => {
-            :'\d+' => {
+            /\d+/ => {
               nil => [],
             },
           },
