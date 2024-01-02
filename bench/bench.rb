@@ -95,8 +95,8 @@ target_urlpaths = [
 
 
 def generate_apps(env_key, key_class)
-  if    key_class == String ; id, c_id = 'id', 'c_id'
-  elsif key_class == Symbol ; id, c_id = :id, :c_id
+  if    key_class == String ; id, c_id = 'id', 'comment_id'
+  elsif key_class == Symbol ; id, c_id = :id, :comment_id
   else                      ; raise "** internal error: key_class=#{key_class.inspect}"
   end
   index_app = proc {|env|
@@ -108,7 +108,7 @@ def generate_apps(env_key, key_class)
   }
   comment_app = proc {|env|
     d = env[env_key]
-    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d[id]}, c_id=#{d[c_id]}</h1>"]]
+    [200, {"Content-Type"=>"text/html"}, ["<h1>id=#{d[id]}, comment_id=#{d[c_id]}</h1>"]]
   }
   return index_app, show_app, comment_app
 end
