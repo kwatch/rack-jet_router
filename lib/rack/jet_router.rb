@@ -390,9 +390,9 @@ module Rack
           d = tree
           sb = ['\A']
           pnames = _parse_path(path, sb, pnames_d) do |str, pat1|
-            #; [!po6o6] param regexp should be stored into nested dict as a Symbol.
+            #; [!po6o6] param regexp should be stored into nested dict as a Regexp.
             d = _next_dict(d, str) unless str.empty?
-            d = (d[pat1.intern] ||= {}) if pat1      # ex: pat1=='[^./?]+'
+            d = (d[Regexp.compile(pat1).freeze] ||= {}) if pat1   # ex: pat1=='[^./?]+'
           end
           sb << '\z'
           rexp = Regexp.compile(sb.join())
@@ -459,7 +459,7 @@ module Rack
           if found
             #; [!5fh08] keeps order of keys in dict.
             d[key] = d.delete(key)
-          #; [!4wdi7] ignores Symbol key (which represents regexp).
+          #; [!4wdi7] ignores non-string key (which represents regexp).
           #; [!66sdb] ignores nil key (which represents leaf node).
           elsif key.is_a?(String) && key[0] == c
             found = true
@@ -575,7 +575,7 @@ module Rack
           case k
           when nil    ; sb << '(\z)'           ; yield v
           when String ; sb << Regexp.escape(k) ; _build_rexp(v, sb, &b)
-          when Symbol ; sb << k.to_s           ; _build_rexp(v, sb, &b)
+          when Regexp ; sb << k.source         ; _build_rexp(v, sb, &b)
           else        ; raise "** internal error"
           end
         end
