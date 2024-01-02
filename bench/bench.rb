@@ -62,8 +62,8 @@ end
 
 get_flag = GetFlag.new(
   :rack        => true,
-  :jet         => true,
   :rocket      => false,
+  :jet         => true,
   :keight      => true,
   :hanami      => true,
   :httprouter  => true,
@@ -139,13 +139,17 @@ rack_app = flag_rack && let() {
 rocket_app = flag_rocket && let() {
   index_app, show_app, comment_app = generate_apps('rack.urlpath_params', String)
   mapping = {
-    '/api/v1' => ENTRIES.each_with_object({}) {|x, d|
-                   d.update({
-                     "/#{x}"               => index_app,
-                     "/#{x}/{id}"          => show_app,
-                     "/#{x}/{id}/comments/{comment_id}" => comment_app,
-                   })
-                 },
+    "/api" => ENTRIES.each_with_object({}) {|x, map|
+      map.update({
+        "/#{x}" => {
+          ""                => index_app,
+          "/{id}"           => show_app,
+          "/{id}/comments"  => {
+            "/{comment_id}" => comment_app,
+          },
+        },
+      })
+    },
   }
   opts = {
   }
@@ -156,17 +160,17 @@ rocket_app = flag_rocket && let() {
 jet_app = flag_jet && let() {
   index_app, show_app, comment_app = generate_apps('rack.urlpath_params', String)
   mapping = {
-    '/api' => ENTRIES.each_with_object({}) {|x, map|
-                map.update({
-                  "/#{x}" => {
-                    ""             => index_app,
-                    "/:id"         => show_app,
-                  },
-                  "/#{x}/:id/comments" => {
-                    "/:comment_id" => comment_app,
-                  },
-                })
-              },
+    "/api" => ENTRIES.each_with_object({}) {|x, map|
+      map.update({
+        "/#{x}" => {
+          ""                => index_app,
+          "/:id"            => show_app,
+          "/:id/comments"   => {
+            "/:comment_id"  => comment_app,
+          },
+        },
+      })
+    },
   }
   opts = {
     cache_size:     0,
@@ -174,42 +178,6 @@ jet_app = flag_jet && let() {
     #prefix_minlength_target: /\A\/api\/\w/,
   }
   Rack::JetRouter.new(mapping, **opts)
-}
-
-
-multiplexer_app = flag_multiplexer && let() {
-  index_app, show_app, comment_app = generate_apps('rack.request.query_hash', String)
-  Rack::Multiplexer.new().tap do |app|
-    ENTRIES.each do |x|
-      app.get "/api/#{x}"     , index_app
-      app.get "/api/#{x}/:id" , show_app
-      app.get "/api/#{x}/:id/comments/:comment_id" , comment_app
-    end
-  end
-}
-
-
-sinatra_app = flag_sinatra && let() {
-  class SinaApp < Sinatra::Base
-    ## run benchmarks without middlewares
-    set :sessions   , false
-    set :logging    , false
-    set :protection , false
-    set :x_cascade  , false
-    #
-    ENTRIES.each do |x|
-      get "/api/#{x}" do
-        "<h1>hello</h1>"
-      end
-      get "/api/#{x}/:id" do
-        "<h1>id=#{params['id']}</h1>"
-      end
-      get "/api/#{x}/:id/comments/:comment_id" do
-        "<h1>id=#{params['id']}, comment_id=#{params['comment_id']}</h1>"
-      end
-    end
-  end
-  SinaApp.new
 }
 
 
@@ -231,10 +199,10 @@ keight_app = flag_keight && let() {
     end
   end
   mapping = [
-    ["/api", ENTRIES.each_with_object([]) {|x, arr|
-               arr << ["/#{x}"              ,  K8HelloAction]
-               arr << ["/#{x}/{id}/comments",  K8CommentAction]
-             }
+    ["/api",    ENTRIES.each_with_object([]) {|x, arr|
+                  arr << ["/#{x}"              ,  K8HelloAction]
+                  arr << ["/#{x}/{id}/comments",  K8CommentAction]
+                }
     ],
   ]
   opts = {
@@ -280,6 +248,42 @@ httprouter_app = flag_httprouter && let() {
 }
 
 
+multiplexer_app = flag_multiplexer && let() {
+  index_app, show_app, comment_app = generate_apps('rack.request.query_hash', String)
+  Rack::Multiplexer.new().tap do |app|
+    ENTRIES.each do |x|
+      app.get "/api/#{x}"     , index_app
+      app.get "/api/#{x}/:id" , show_app
+      app.get "/api/#{x}/:id/comments/:comment_id" , comment_app
+    end
+  end
+}
+
+
+sinatra_app = flag_sinatra && let() {
+  class SinaApp < Sinatra::Base
+    ## run benchmarks without middlewares
+    set :sessions   , false
+    set :logging    , false
+    set :protection , false
+    set :x_cascade  , false
+    #
+    ENTRIES.each do |x|
+      get "/api/#{x}" do
+        "<h1>hello</h1>"
+      end
+      get "/api/#{x}/:id" do
+        "<h1>id=#{params['id']}</h1>"
+      end
+      get "/api/#{x}/:id/comments/:comment_id" do
+        "<h1>id=#{params['id']}, comment_id=#{params['comment_id']}</h1>"
+      end
+    end
+  end
+  SinaApp.new
+}
+
+
 begin
   Rack::MockRequest
 rescue
@@ -319,9 +323,9 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
   #    env = newenv(path)
   #    i = 0; n = N
   #    while (i += 1) <= n
-  #      tuple = rack_app.call(env)
+  #      result = rack_app.call(env)
   #    end
-  #    tuple
+  #    result
   #  end
   #end
   flag_rack and target_urlpaths.each do |path|
@@ -330,15 +334,15 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
       env = newenv(path)
       i = 0; n = N
       while (i += 1) <= n
-        tuple = rack_app.call(env)
+        result = rack_app.call(env)
       end
-      tuple
+      result
     end
   end
 
   ### RocketRouter
   flag_rocket and target_urlpaths.each do |path|
-    rocket_app.call(newenv(path))          # warm up
+    rocket_app.call(newenv(path))             # warm up
     task "(RocketRouter)   #{path}" do
       env = newenv(path)
       i = 0; n = N
@@ -357,9 +361,10 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
       env = newenv(path)
       i = 0; n = N
       while (i += 1) <= n
-        tuple = jet_app.call(env)
+        result = jet_app.call(env)
+        #result = jet_app.find(path)
       end
-      tuple
+      result
     end
   end
 
@@ -370,9 +375,9 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
       env = newenv(path)
       i = 0; n = N
       while (i += 1) <= n
-        tuple = keight_app.call(env)
+        result = keight_app.call(env)
       end
-      tuple
+      result
     end
   end
 
@@ -383,15 +388,16 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
       env = newenv(path)
       i = 0; n = N
       while (i += 1) <= n
-        tuple = hanami_app.call(env)
+        result = hanami_app.call(env)
+        #result = hanami_app.route(path)
       end
-      tuple
+      result
     end
   end
 
   ### HttpRouter
   flag_httprouter and target_urlpaths.each do |path|
-    httprouter_app.call(newenv(path))      # warm up
+    httprouter_app.call(newenv(path))         # warm up
     task "(HttpRouter)     #{path}" do
       env = newenv(path)
       i = 0; n = N
@@ -410,9 +416,9 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
       env = newenv(path)
       i = 0; n = N
       while (i += 1) <= n
-        tuple = multiplexer_app.call(env)
+        result = multiplexer_app.call(env)
       end
-      tuple
+      result
     end
   end
 
@@ -423,15 +429,15 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
       env = newenv(path)
       i = 0; n = N
       while (i += 1) <= n
-        tuple = sinatra_app.call(env)
+        result = sinatra_app.call(env)
       end
-      tuple
+      result
     end
   end
 
   ## validation
-  validate do |val|   # or: validate do |val, task_name, tag|
-    tuple = val
+  validate do |result|   # or: validate do |result, task_name, tag|
+    tuple = result
     assert tuple[0] == 200, "Expected 200 but got #{tuple[0]}"
     body = tuple[2].each {|x| break x }
     expected_bodies = [
