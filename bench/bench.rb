@@ -63,7 +63,7 @@ end
 get_flag = GetFlag.new(
   :rack        => true,
   :jet         => true,
- #:rocket      => true,
+  :rocket      => false,
   :keight      => true,
   :hanami      => true,
   :httprouter  => true,
@@ -73,7 +73,7 @@ get_flag = GetFlag.new(
 
 
 flag_rack        = get_flag.(:rack       , "rack"            ) { Rack.release }
-#flag_rocket     = get_flag.(:rocket     , "rocketrouter"    ) { RocketRouter::VERSION }
+flag_rocket      = get_flag.(:rocket     , "rocketrouter"    ) { RocketRouter::VERSION }
 flag_jet         = get_flag.(:jet        , "rack/jet_router" ) { Rack::JetRouter::RELEASE }
 flag_keight      = get_flag.(:keight     , "keight"          ) { K8::RELEASE }
 flag_hanami      = get_flag.(:hanami     , "hanami/router"   ) { Hanami::Router::VERSION }
@@ -133,6 +133,23 @@ rack_app = flag_rack && let() {
     resp.write("<h1>hello</h1>")
     resp.finish()
   end
+}
+
+
+rocket_app = flag_rocket && let() {
+  index_app, show_app, comment_app = generate_apps('rack.urlpath_params', String)
+  mapping = {
+    '/api/v1' => ENTRIES.each_with_object({}) {|x, d|
+                   d.update({
+                     "/#{x}"               => index_app,
+                     "/#{x}/{id}"          => show_app,
+                     "/#{x}/{id}/comments/{comment_id}" => comment_app,
+                   })
+                 },
+  }
+  opts = {
+  }
+  RocketRouter.new(mapping, **opts)
 }
 
 
@@ -316,6 +333,20 @@ Benchmarker.scope(title, width: width + 17, loop: 1, iter: 1, extra: 0, sleep: 0
         tuple = rack_app.call(env)
       end
       tuple
+    end
+  end
+
+  ### RocketRouter
+  flag_rocket and target_urlpaths.each do |path|
+    rocket_app.call(newenv(path))          # warm up
+    task "(RocketRouter)   #{path}" do
+      env = newenv(path)
+      i = 0; n = N
+      while (i += 1) <= n
+        result = rocket_app.call(env)
+        #result = rocket_app.find(path)
+      end
+      result
     end
   end
 
