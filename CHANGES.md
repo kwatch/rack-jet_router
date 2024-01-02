@@ -9,6 +9,7 @@ Release 1.4.0 (????-??-??)
 * [enhance] Allows to use mormal Hash object as request method mapping.
 * [enhance] Supports `(.html|.json)` style pattern.
 * [enhance] Treats `/foo(.html|.json)` as three fixed paths `/foo`, `/foo.html` and `/foo.json`. This is much faster than `/foo(.:format)`.
+* [enhance] Rewrite benchmark script.
 
 
 Release 1.3.1 (2023-12-10)
