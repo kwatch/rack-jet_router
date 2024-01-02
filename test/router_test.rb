@@ -274,48 +274,6 @@ Oktest.scope do
         end
       end
 
-      spec "[!u2ff4] compiles urlpath mapping and generates subrouters." do
-        @router.instance_exec(self) do |_|
-          id = '[^./?]+'
-          #
-          _.ok {@prefix_range} == (0...11)
-          _.ok {@variable_endpoints.keys()} == ["/api/books/", "/admin/book", "/static/v1/", ""]
-          _.ok {@variable_endpoints.keys()[0]}.length(11)
-          _.ok {@variable_endpoints.keys()[1]}.length(11)
-          #
-          subr1 = @variable_endpoints["/api/books/"]
-          _.ok {subr1}.is_a?(Rack::JetRouter::SubRouter)
-          _.ok {subr1.compound_path_rexp} == %r!\A/api/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))\z!
-          _.ok {subr1.tuples} == [
-            [%r'\A/api/books/([^./?]+)\z',      ['id'], book_show_api, (11..-1), nil],
-            [%r'\A/api/books/([^./?]+)/edit\z', ['id'], book_edit_api, (11..-6), nil],
-            [%r'\A/api/books/([^./?]+)/comments\z',          ['book_id'], comment_create_api, (11..-10), nil],
-            [%r'\A/api/books/([^./?]+)/comments/([^./?]+)\z', ['book_id', 'comment_id'], comment_update_api, (11..-1), '/comments/'],
-          ]
-          #
-          subr2 = @variable_endpoints["/admin/book"]
-          _.ok {subr2}.is_a?(Rack::JetRouter::SubRouter)
-          _.ok {subr2.compound_path_rexp} == %r!\A/admin/books/#{id}(\z)\z!
-          map = {
-            'GET'    => admin_book_show_app,
-            'PUT'    => admin_book_update_app,
-            'DELETE' => admin_book_delete_app,
-          }
-          _.ok {subr2.tuples} == [
-            [%r'\A/admin/books/([^./?]+)\z', ['id'], map, (13..-1), nil],
-          ]
-        end
-        #
-        mapping = [
-          ['/api/books'      , book_list_api],
-        ]
-        router = Rack::JetRouter.new(mapping)
-        router.instance_exec(self) do |_|
-          _.ok {@fixed_endpoints} == {'/api/books' => book_list_api}
-          _.ok {@variable_endpoints.keys()} == [""]
-        end
-      end
-
       spec "[!ec0av] treats '/foo(.html|.json)' as three fixed urlpaths." do
         mapping = {
           "/api/books(.html|.json)" => book_list_api,
@@ -353,17 +311,26 @@ Oktest.scope do
 
       spec "[!qgdm4] calculates prefix range." do
         range = @router.instance_eval { @prefix_range }
-        dict  = @router.instance_eval { @variable_endpoints }
         ok {range} == (0...11)
-        ok {dict.keys()} == ["/api/books/", "/admin/book", ""]
-        ok {dict.keys()[0]}.length(11)
-        ok {dict.keys()[1]}.length(11)
+      end
+
+      spec "[!evu7t] ignores non-target path when calculating prefix range." do
+        r1 = Rack::JetRouter.new(whole_urlpath_mapping, prefix_minlength_target: /\A\/api\//)
+        range = r1.instance_eval { @prefix_range }
+        ok {range} == (0...11)
+        #
+        r2 = Rack::JetRouter.new(whole_urlpath_mapping, prefix_minlength_target: /\A\/admin\//)
+        range = r2.instance_eval { @prefix_range }
+        ok {range} == (0...13)
       end
 
       spec "[!m449g] generates subrouters per prefix." do
-        id = '[^./?]+'
         dict = @router.instance_eval { @variable_endpoints }
-        ok {dict.keys()} == ["/api/books/", "/admin/book", ""]
+        ok {dict.keys()} == ["/api/books/", "/admin/book", "/static/v1/", ""]
+        ok {dict.keys()[0]}.length(11)
+        ok {dict.keys()[1]}.length(11)
+        #
+        id = '[^./?]+'
         subr1 = dict["/api/books/"]
         ok {subr1}.is_a?(Rack::JetRouter::SubRouter)
         ok {subr1.compound_path_rexp} == %r!\A/api/books/#{id}(?:(\z)|/(?:edit(\z)|comments(?:(\z)|/#{id}(\z))))\z!
@@ -387,9 +354,26 @@ Oktest.scope do
         ]
       end
 
+      spec "[!ooq83] prefix should be longer than min length." do
+        range = @router.instance_eval { @prefix_range }
+        prefixes = @router.instance_eval { @variable_endpoints.keys() }
+        prefixes.delete("")
+        ok {prefixes}.all? {|prefix| prefix.length > range.max }
+      end
+
+      spec "[!whzmm] uses empty string as prefix if prefix length is too short." do
+        router = Rack::JetRouter.new(whole_urlpath_mapping, prefix_minlength_target: /\A\/admin\/\w{5}\//)
+        range = router.instance_eval { @prefix_range }
+        ok {range} == (0...13)
+        variable_endpoints = router.instance_eval { @variable_endpoints }
+        ok {variable_endpoints.keys} == ["", "/admin/books/"]
+        ok {variable_endpoints[""].compound_path_rexp} == /\A\/(?:api\/books\/[^.\/?]+(?:(\z)|\/(?:edit(\z)|comments(?:(\z)|\/[^.\/?]+(\z))))|static\/v1\/.*(\z))\z/
+        ok {variable_endpoints["/admin/books/"].compound_path_rexp} == /\A\/admin\/books\/[^.\/?]+(\z)\z/
+      end
+
       spec "[!sastr] prepares empty subrouter." do
         dict = @router.instance_eval { @variable_endpoints }
-        ok {dict.keys()} == ["/api/books/", "/admin/book", ""]
+        ok {dict.keys()} == ["/api/books/", "/admin/book", "/static/v1/", ""]
         subr = dict[""]
         ok {subr}.is_a?(Rack::JetRouter::SubRouter)
         ok {subr.compound_path_rexp} == /\A\z/
@@ -503,6 +487,45 @@ Oktest.scope do
             '/books/3'=>pair3,
             '/books/1'=>pair1,
           }
+        end
+      end
+
+    end
+
+
+    topic '#_find()' do
+
+      before do
+        @app = app = proc { [200, {}, []] }
+        mapping = {
+          "/books/new/:category" => app,
+          "/books/en/:word" => app,
+          "/books/:title" => app,
+        }
+        filter = /\A\/books\/\w/
+        @router = Rack::JetRouter.new(mapping, prefix_minlength_target: filter)
+      end
+
+      spec "[!8eapm] if prefix not exist, uses empty string as prefix." do
+        app = @app
+        @router.instance_exec(self) do |_|
+          _.ok {@variable_endpoints.keys()} == ["/books/new", "/books/en/", ""]
+          _.ok {"/books/blabla"[@prefix_range]}       == "/books/bla"
+          _.ok {@variable_endpoints.keys()}.NOT.include?("/books/bla")
+          #
+          _.ok {_find("/books/blabla")} == [app, ["title"], ["blabla"]]
+        end
+      end
+
+      spec "[!b8p77] if request path not found in subrouter, try to find in empty string subrouter." do
+        app = @app
+        @router.instance_exec(self) do |_|
+          _.ok {@variable_endpoints.keys()} == ["/books/new", "/books/en/", ""]
+          _.ok {"/books/newbie"[@prefix_range]}   == "/books/new"
+          _.ok {@variable_endpoints.keys()}.include?("/books/new")
+          #
+          _.ok {_find("/books/newbie")} == [app, ["title"], ["newbie"]]
+          _.ok {_find("/books/new")}    == [app, ["title"], ["new"]]
         end
       end
 

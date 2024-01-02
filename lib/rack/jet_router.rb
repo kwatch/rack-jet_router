@@ -83,6 +83,7 @@ module Rack
                         .each_with_object({}) {|s, d| d[s] = s.intern }
 
     def initialize(mapping, cache_size: 0, env_key: 'rack.urlpath_params',
+                            prefix_minlength_target: /\A\/\w/,
                             int_param: nil,          # ex: /(?:\A|_)id\z/
                             urlpath_cache_size: 0,   # for backward compatibility
                             _enable_range: true)     # undocumentend keyword arg
@@ -155,10 +156,21 @@ module Rack
           pairs << [path, item]
         end
       end
-      #; [!u2ff4] compiles urlpath mapping and generates subrouters.
-      min_index = pairs.collect {|path, _| path =~ param_rexp }.min() || 0
+      #; [!qgdm4] calculates prefix range.
+      #; [!evu7t] ignores non-target path when calculating prefix range.
+      min_index = pairs.select {|path, _| prefix_minlength_target === path } \
+                       .collect {|path, _| path =~ param_rexp } \
+                       .min() || 0
       @prefix_range = (0...min_index)
-      pairs.group_by {|path, _| path[@prefix_range] }.each do |prefix, pairs_|
+      #; [!m449g] generates subrouters per prefix.
+      pairs.group_by {|path, _|
+        #; [!ooq83] prefix should be longer than min length.
+        #; [!whzmm] uses empty string as prefix if prefix length is too short.
+        index = (path =~ param_rexp)
+        prefix = index >= min_index ? path[@prefix_range] : ""
+        prefix !~ /[:(]/  or raise "** internal error"
+        prefix
+      }.each do |prefix, pairs_|
         @variable_endpoints[prefix] = builder.build_subrouter(pairs_)
       end
       #; [!sastr] prepares empty subrouter.
@@ -238,9 +250,17 @@ module Rack
 
     def _find(req_path)
       prefix = req_path[@prefix_range]
-      subrouter = @variable_endpoints[prefix] || @variable_endpoints[""]
+      subrouter = @variable_endpoints[prefix]
+      if subrouter
+        trio = subrouter.find(req_path)
+        return trio if trio
+      end
+      #; [!8eapm] if prefix not exist, uses empty string as prefix.
+      #; [!b8p77] if request path not found in subrouter, try to find in empty string subrouter.
+      subrouter = @variable_endpoints[""]
       return subrouter.find(req_path)
     end
+    private :_find
 
     ## Yields pair of urlpath pattern and app.
     def each(&block)
