@@ -5,8 +5,8 @@
 ## Usage:
 ##   $ gem install bundler
 ##   $ bundler install
-##   $ ruby bench.rb -n 1000_000
-##   $ ruby bench.rb -n 1000_000 --rack=0 --sinatra=0 --multiplexer=0 # --hanami=0 --jetrouter=0 --keight=0
+##   $ ruby bench.rb -n 1000000
+##   $ ruby bench.rb -n 1000000 --rack=off --sinatra=off --multiplexer=off # --jet=off --keight=off --hanami=off --httprouter=off
 ##
 
 
