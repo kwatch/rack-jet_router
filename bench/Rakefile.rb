@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # frozen_string_literal: true
 
+task :default do
+  sh "rake -T", verbose: false
+end
 
 desc "run 'bench.rb' script"
 task :bench, :N do |t, args|
