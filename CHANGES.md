@@ -2,6 +2,12 @@ CHANGES
 =======
 
 
+Release 1.4.1 (2024-01-04)
+--------------------------
+
+* [bugfix] Fix 'bench' task not to raise error when arg not specified.
+
+
 Release 1.4.0 (2024-01-02)
 --------------------------
 
